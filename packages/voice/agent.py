@@ -1,3 +1,4 @@
+# packages/voice/agent.py
 import os
 import uuid
 from typing import Any
@@ -9,25 +10,26 @@ from livekit.agents import AgentSession, Agent, RoomInputOptions
 from livekit.agents import (
     APIConnectOptions,
     APIConnectionError,
-    APIStatusError,
     DEFAULT_API_CONNECT_OPTIONS,
     NOT_GIVEN,
 )
 from livekit.agents import llm
-from livekit.plugins import (
-    noise_cancellation,
-)
-from livekit.plugins import google, openai, silero
-from prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
+from livekit.plugins import noise_cancellation, silero
+from livekit.plugins import google, openai
+
+from personas import detect_persona, get_persona
+from tts_kokoro import make_tts
 from tools import get_weather, search_web, send_email
 
 load_dotenv()
 
 DEFAULT_JARVIS_URL = "http://localhost:8787"
-TOKEN_SERVER_MODE_URL = "http://localhost:8788/mode"
+TOKEN_SERVER_URL = os.getenv("TOKEN_SERVER_URL", "http://localhost:8788")
 DEFAULT_MODE = "gemini"
-VALID_MODES = {"gemini", "jarvis", "anthropic", "openai"}
+VALID_MODES = {"gemini", "ollama", "claude", "gpt"}
 
+
+# -- JarvisLLM bridge (calls Core Node at /ask) -------------------------------
 
 class JarvisLLM(llm.LLM):
     def __init__(self, *, jarvis_url: str | None = None, system_prompt: str = "") -> None:
@@ -42,6 +44,20 @@ class JarvisLLM(llm.LLM):
     @property
     def provider(self) -> str:
         return "jarvis"
+
+    @property
+    def ask_url(self) -> str:
+        return f"{self._jarvis_url}/ask"
+
+    def build_jarvis_text(self, chat_ctx: llm.ChatContext) -> str:
+        latest_user_text = ""
+        for message in chat_ctx.messages():
+            text = message.text_content
+            if not text:
+                continue
+            if message.role == "user":
+                latest_user_text = text
+        return latest_user_text
 
     def chat(
         self,
@@ -63,58 +79,14 @@ class JarvisLLM(llm.LLM):
     async def aclose(self) -> None:
         pass
 
-    @property
-    def ask_url(self) -> str:
-        return f"{self._jarvis_url}/ask"
-
-    def build_jarvis_text(self, chat_ctx: llm.ChatContext) -> str:
-        latest_user_text = ""
-        latest_non_system_text = ""
-
-        for message in chat_ctx.messages():
-            text = message.text_content
-            if not text:
-                continue
-            if message.role == "user":
-                latest_user_text = text
-            if message.role not in ("system", "developer"):
-                latest_non_system_text = text
-
-        user_text = latest_user_text or latest_non_system_text
-        if not user_text:
-            user_text = SESSION_INSTRUCTION.strip()
-
-        if not self._system_prompt:
-            return user_text
-
-        return (
-            "System context for the voice assistant:\n"
-            f"{self._system_prompt}\n\n"
-            "User request:\n"
-            f"{user_text}"
-        )
-
 
 class JarvisLLMStream(llm.LLMStream):
-    def __init__(
-        self,
-        jarvis_llm: JarvisLLM,
-        *,
-        chat_ctx: llm.ChatContext,
-        tools: list[llm.Tool],
-        conn_options: APIConnectOptions,
-    ) -> None:
-        super().__init__(
-            jarvis_llm,
-            chat_ctx=chat_ctx,
-            tools=tools,
-            conn_options=conn_options,
-        )
+    def __init__(self, jarvis_llm, *, chat_ctx, tools, conn_options):
+        super().__init__(jarvis_llm, chat_ctx=chat_ctx, tools=tools, conn_options=conn_options)
         self._jarvis_llm = jarvis_llm
 
     async def _run(self) -> None:
         request_text = self._jarvis_llm.build_jarvis_text(self._chat_ctx)
-
         try:
             async with httpx.AsyncClient(timeout=self._conn_options.timeout) as client:
                 response = await client.post(
@@ -126,100 +98,96 @@ class JarvisLLMStream(llm.LLMStream):
         except httpx.HTTPError as exc:
             raise APIConnectionError(f"Could not reach JARVIS: {exc}", retryable=True) from exc
 
-        if response.status_code >= 400:
-            raise APIStatusError(
-                f"JARVIS returned HTTP {response.status_code}.",
-                status_code=response.status_code,
-                body=response.text,
+        if response.status_code != 200:
+            raise APIConnectionError(
+                f"JARVIS returned HTTP {response.status_code}", retryable=False
             )
 
-        try:
-            payload = response.json()
-        except ValueError as exc:
-            raise APIStatusError(
-                "JARVIS returned a non-JSON response.",
-                status_code=response.status_code,
-                body=response.text,
-                retryable=False,
-            ) from exc
-
-        reply = payload.get("reply")
-        if not isinstance(reply, str) or not reply.strip():
-            raise APIStatusError(
-                "JARVIS response is missing a non-empty 'reply' field.",
-                status_code=response.status_code,
-                body=payload,
-                retryable=False,
-            )
-
-        self._event_ch.send_nowait(
-            llm.ChatChunk(
-                id=f"jarvis_{uuid.uuid4().hex}",
-                delta=llm.ChoiceDelta(role="assistant", content=reply.strip()),
-            )
+        reply_text = response.json().get("reply", "")
+        chunk = llm.ChatChunk(
+            id=str(uuid.uuid4()),
+            delta=llm.ChoiceDelta(role="assistant", content=reply_text),
         )
+        self._event_ch.send_nowait(chunk)
 
 
-class Assistant(Agent):
-    def __init__(self, llm=None, tools=None) -> None:
-        kwargs = {"instructions": AGENT_INSTRUCTION}
-        if llm is not None:
-            kwargs["llm"] = llm
-        if tools is not None:
-            kwargs["tools"] = tools
-        super().__init__(**kwargs)
-
+# -- Mode + Persona helpers ---------------------------------------------------
 
 async def get_mode() -> str:
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            resp = await client.get(TOKEN_SERVER_MODE_URL)
-            if resp.status_code == 200:
-                return resp.json().get("mode", DEFAULT_MODE)
+            resp = await client.get(f"{TOKEN_SERVER_URL}/mode")
+            return resp.json().get("mode", DEFAULT_MODE)
+    except Exception:
+        return os.getenv("AGENT_MODE", DEFAULT_MODE)
+
+
+async def notify_persona(persona: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            await client.post(
+                f"{TOKEN_SERVER_URL}/persona",
+                json={"persona": persona},
+            )
     except Exception:
         pass
-    return os.getenv("AGENT_MODE", DEFAULT_MODE)
 
 
 def normalize_mode(mode: str) -> str:
-    selected = mode.lower().strip()
-    if selected not in VALID_MODES:
-        return DEFAULT_MODE
-    return selected
+    return mode.lower().strip() if mode.lower().strip() in VALID_MODES else DEFAULT_MODE
 
 
-def create_anthropic_llm():
-    try:
-        from livekit.plugins import anthropic
+# -- Persona-aware Agent ------------------------------------------------------
 
-        return anthropic.LLM(model="claude-sonnet-4-6")
-    except Exception:
-        return openai.LLM(model="claude-sonnet-4-6")
+class StarkAssistant(Agent):
+    """Agent that detects JARVIS/FRIDAY persona from first user utterance."""
+
+    def __init__(self, persona_state: dict, tools=None) -> None:
+        self._persona_state = persona_state
+        self._persona_detected = False
+        persona_mod = get_persona("friday")
+        super().__init__(instructions=persona_mod.AGENT_INSTRUCTION, tools=tools or [])
+
+    async def on_user_turn_completed(
+        self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
+    ) -> None:
+        if not self._persona_detected:
+            text = new_message.text_content or ""
+            persona_name = detect_persona(text)
+            self._persona_detected = True
+            self._persona_state["persona"] = persona_name
+            persona_mod = get_persona(persona_name)
+            self.instructions = persona_mod.AGENT_INSTRUCTION
+            await notify_persona(persona_name)
+        await super().on_user_turn_completed(turn_ctx, new_message)
 
 
-async def start_gemini_session(ctx: agents.JobContext) -> None:
+# -- Session factories --------------------------------------------------------
+
+async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> None:
+    persona_mod = get_persona(persona_state.get("persona", "friday"))
     session = AgentSession()
-
     await session.start(
         room=ctx.room,
-        agent=Assistant(
+        agent=Agent(
             llm=google.beta.realtime.RealtimeModel(voice="Aoede", temperature=0.8),
             tools=[get_weather, search_web, send_email],
         ),
         room_input_options=RoomInputOptions(
-            video_enabled=True,
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )
+    await session.generate_reply(instructions=persona_mod.SESSION_INSTRUCTION)
 
-    await session.generate_reply(instructions=SESSION_INSTRUCTION)
 
-
-async def start_pipeline_session(ctx: agents.JobContext, mode: str) -> None:
-    if mode == "jarvis":
-        selected_llm = JarvisLLM(system_prompt=AGENT_INSTRUCTION)
-    elif mode == "anthropic":
-        selected_llm = create_anthropic_llm()
+async def start_pipeline_session(
+    ctx: agents.JobContext, mode: str, persona_state: dict
+) -> None:
+    if mode in ("ollama", "claude"):
+        persona_mod = get_persona(persona_state.get("persona", "friday"))
+        selected_llm = JarvisLLM(system_prompt=persona_mod.AGENT_INSTRUCTION)
+    elif mode == "gpt":
+        selected_llm = openai.LLM(model="gpt-4o-mini")
     else:
         selected_llm = openai.LLM(model="gpt-4o-mini")
 
@@ -227,30 +195,32 @@ async def start_pipeline_session(ctx: agents.JobContext, mode: str) -> None:
         stt=openai.STT(),
         vad=silero.VAD.load(),
         llm=selected_llm,
-        tts=openai.TTS(voice="ash"),
+        tts=make_tts(persona_state),
     )
+
+    persona_mod = get_persona(persona_state.get("persona", "friday"))
 
     await session.start(
         room=ctx.room,
-        agent=Assistant(),
+        agent=StarkAssistant(persona_state, tools=[get_weather, search_web, send_email]),
         room_input_options=RoomInputOptions(
-            video_enabled=True,
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )
+    await session.generate_reply(instructions=persona_mod.SESSION_INSTRUCTION)
 
-    await session.generate_reply(instructions=SESSION_INSTRUCTION)
 
+# -- Entry point --------------------------------------------------------------
 
 async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
     mode = normalize_mode(await get_mode())
+    persona_state = {"persona": "friday"}
 
     if mode == "gemini":
-        await start_gemini_session(ctx)
-        return
-
-    await start_pipeline_session(ctx, mode)
+        await start_gemini_session(ctx, persona_state)
+    else:
+        await start_pipeline_session(ctx, mode, persona_state)
 
 
 if __name__ == "__main__":
