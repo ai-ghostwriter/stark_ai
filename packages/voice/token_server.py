@@ -1,3 +1,4 @@
+# packages/voice/token_server.py
 import os
 
 from dotenv import load_dotenv
@@ -6,10 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from livekit import api
 from pydantic import BaseModel
 
-
 load_dotenv()
 
-app = FastAPI(title="FRIDAY LiveKit Token Server")
+app = FastAPI(title="STARK-AI Token Server")
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,11 +20,18 @@ app.add_middleware(
 )
 
 _current_mode: str = "gemini"
-VALID_MODES = {"gemini", "jarvis", "anthropic", "openai"}
+_current_persona: str = "friday"
+
+VALID_MODES = {"gemini", "ollama", "claude", "gpt"}
+VALID_PERSONAS = {"jarvis", "friday"}
 
 
 class ModePayload(BaseModel):
     mode: str
+
+
+class PersonaPayload(BaseModel):
+    persona: str
 
 
 def require_env(name: str) -> str:
@@ -43,13 +50,27 @@ def get_mode_endpoint():
 def set_mode_endpoint(payload: ModePayload):
     global _current_mode
     if payload.mode not in VALID_MODES:
-        raise HTTPException(status_code=400, detail=f"Invalid mode. Valid: {list(VALID_MODES)}")
+        raise HTTPException(status_code=400, detail=f"Invalid mode. Valid: {sorted(VALID_MODES)}")
     _current_mode = payload.mode
     return {"mode": _current_mode}
 
 
+@app.get("/persona")
+def get_persona_endpoint():
+    return {"persona": _current_persona}
+
+
+@app.post("/persona")
+def set_persona_endpoint(payload: PersonaPayload):
+    global _current_persona
+    if payload.persona not in VALID_PERSONAS:
+        raise HTTPException(status_code=400, detail=f"Invalid persona. Valid: {sorted(VALID_PERSONAS)}")
+    _current_persona = payload.persona
+    return {"persona": _current_persona}
+
+
 @app.get("/token")
-def get_token(room: str = "friday-room", identity: str = "user") -> dict[str, str]:
+def get_token(room: str = "stark-room", identity: str = "user") -> dict[str, str]:
     livekit_url = require_env("LIVEKIT_URL")
     api_key = require_env("LIVEKIT_API_KEY")
     api_secret = require_env("LIVEKIT_API_SECRET")
@@ -75,5 +96,4 @@ def get_token(room: str = "friday-room", identity: str = "user") -> dict[str, st
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("token_server:app", host="0.0.0.0", port=8788, reload=True)
