@@ -1,0 +1,124 @@
+.voice {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 42px minmax(180px, 1fr) minmax(100px, 150px);
+  gap: 16px;
+  padding: 4px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.badge {
+  border: 1px solid var(--color-border-bright);
+  padding: 8px 12px;
+  color: var(--color-bright);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-shadow: var(--glow-cyan);
+  box-shadow: inset 0 0 14px rgba(0, 212, 245, 0.12), var(--glow-cyan);
+}
+
+.listening {
+  border-color: #66ff99;
+  color: #aaffc7;
+}
+
+.thinking {
+  border-color: #ffbf47;
+  color: #ffe0a3;
+}
+
+.speaking {
+  border-color: var(--color-border-bright);
+  color: var(--color-text-bright);
+}
+
+.label {
+  color: var(--color-text);
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.core {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.ring {
+  width: min(360px, 58vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0, 212, 245, 0.68);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(0, 212, 245, 0.12), transparent 52%),
+    conic-gradient(from 40deg, transparent 0 12%, rgba(0, 212, 245, 0.38) 12% 14%, transparent 14% 45%, rgba(129, 247, 251, 0.32) 45% 47%, transparent 47% 100%);
+  box-shadow: var(--glow-cyan-strong), inset 0 0 42px rgba(0, 212, 245, 0.12);
+  animation: rotate 12s linear infinite;
+}
+
+.innerRing {
+  width: 64%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(129, 247, 251, 0.55);
+  border-radius: 50%;
+  background: rgba(0, 7, 15, 0.72);
+  animation: rotateReverse 9s linear infinite;
+}
+
+.transcript {
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid rgba(0, 212, 245, 0.18);
+  padding-top: 12px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.message {
+  display: grid;
+  gap: 5px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(1, 45, 64, 0.64);
+}
+
+.message span {
+  color: var(--color-bright);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.message p {
+  margin: 0;
+  color: var(--color-text-bright);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateReverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}

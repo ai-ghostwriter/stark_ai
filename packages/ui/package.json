@@ -1,0 +1,26 @@
+{
+  "name": "friday-livekit-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.14",
+    "@livekit/components-styles": "^1.1.6",
+    "livekit-client": "^2.15.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sass": "1.89.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.5.2",
+    "typescript": "^5.8.3",
+    "vite": "6.4.3"
+  }
+}

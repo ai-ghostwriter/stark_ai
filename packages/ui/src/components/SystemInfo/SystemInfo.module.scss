@@ -1,0 +1,21 @@
+.info {
+  display: grid;
+  gap: 9px;
+}
+
+.info div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--color-text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.info strong {
+  color: var(--color-text-bright);
+  font-size: 10px;
+  font-weight: 400;
+  text-align: right;
+}

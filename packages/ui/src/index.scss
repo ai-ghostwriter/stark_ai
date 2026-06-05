@@ -1,0 +1,21 @@
+@use "./theme.scss";
+
+html, body, #root { height: 100%; width: 100%; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
+body {
+  background-image: url("/sfondo.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+button, input { font-family: inherit; }
+::-webkit-scrollbar { width: 0; height: 0; }
+* { scrollbar-width: none; }
+
+.lk-room-container {
+  height: 100%;
+  background: transparent;
+}

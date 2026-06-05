@@ -1,0 +1,328 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import os from "node:os";
+import { loadConfig } from "./config.js";
+import { Registry } from "./tools/registry.js";
+import { getTime } from "./tools/builtins/time.js";
+import { getWeather } from "./tools/builtins/weather.js";
+import { readFileTool } from "./tools/builtins/readFile.js";
+import { makeIngestCerebro } from "./tools/builtins/ingestCerebro.js";
+import { makeBookStatus } from "./tools/builtins/bookStatus.js";
+import { makeRunPhase } from "./tools/builtins/runPhase.js";
+import { makeNewBook } from "./tools/builtins/newBook.js";
+import { makeKbIndex } from "./tools/builtins/kbIndex.js";
+import { makeKbSearch } from "./tools/builtins/kbSearch.js";
+import { Session } from "./core/session.js";
+import { JsonSessionStore, type SessionStore } from "./core/sessionStore.js";
+import { collectStats } from "./core/systemStats.js";
+import { translate } from "./core/translate.js";
+import { Orchestrator } from "./core/orchestrator.js";
+import { chatLocal } from "./llm/ollama.js";
+import { chatApi } from "./llm/anthropic.js";
+import { embed as embedRaw, type Embedder } from "./llm/embeddings.js";
+import type { Result, RouteCtx } from "./llm/types.js";
+
+interface AskOrchestrator {
+  handle(input: string, session: Session, ctx: RouteCtx): Promise<Result>;
+}
+
+interface HttpJsonResult {
+  status: number;
+  json: object;
+}
+
+type SaveSession = (history: ReturnType<Session["messages"]>) => Promise<void>;
+type TranslateText = (text: string, to: "en") => Promise<string>;
+type SpeakText = (text: string) => Promise<void>;
+let activeSpeech: ChildProcess | null = null;
+
+export function normalizeSpeechText(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/#{1,6}\s*/g, "")
+    .replace(/([0-9]+(?:[.,][0-9]+)?)\s*°\s*C/gi, "$1 gradi")
+    .replace(/([0-9]+(?:[.,][0-9]+)?)\s*km\/h/gi, "$1 chilometri orari")
+    .replace(/([0-9]+(?:[.,][0-9]+)?)\s*%/g, "$1 percento")
+    .replace(/[^\p{L}\p{N}\p{P}\p{Zs}]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function splitSpeechTextForSystem(text: string, maxLength = 140): string[] {
+  const normalized = normalizeSpeechText(text);
+  if (!normalized) return [];
+
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const sentence of normalized.split(/(?<=[.!?])\s+/)) {
+    const candidate = `${current} ${sentence}`.trim();
+    if (candidate.length > maxLength && current) {
+      chunks.push(current);
+      current = sentence;
+    } else {
+      current = candidate;
+    }
+  }
+
+  if (current) chunks.push(current);
+
+  return chunks.flatMap((chunk) => {
+    if (chunk.length <= maxLength) return [chunk];
+
+    const forced: string[] = [];
+    for (let index = 0; index < chunk.length; index += maxLength) {
+      forced.push(chunk.slice(index, index + maxLength).trim());
+    }
+    return forced.filter(Boolean);
+  });
+}
+
+function createRuntime(): {
+  cfg: ReturnType<typeof loadConfig>;
+  registry: Registry;
+  orchestrator: Orchestrator;
+  session: Session;
+  sessionStore: SessionStore;
+  ready: Promise<void>;
+} {
+  const cfg = loadConfig();
+  const registry = new Registry();
+  const ingestCerebro = makeIngestCerebro({ cerebroScript: cfg.cerebroScript });
+  const bookStatus = makeBookStatus();
+  const runPhase = makeRunPhase();
+  const newBook = makeNewBook();
+  const embedder: Embedder = (input) => embedRaw({ url: cfg.ollamaUrl, model: cfg.embedModel, input });
+  const kbIndex = makeKbIndex({ embed: embedder, model: cfg.embedModel });
+  const kbSearch = makeKbSearch({ embed: embedder });
+  for (const t of [getTime, getWeather, readFileTool, ingestCerebro, bookStatus, runPhase, newBook, kbIndex, kbSearch])
+    registry.register(t);
+  const orchestrator = new Orchestrator({ cfg, registry, chatLocal, chatApi });
+  const session = new Session();
+  const sessionStore = new JsonSessionStore(cfg.sessionFile);
+  const ready = sessionStore.loadSession().then((history) => {
+    session.setHistory(history);
+  });
+  return { cfg, registry, orchestrator, session, sessionStore, ready };
+}
+
+export async function handleAsk(
+  orchestrator: AskOrchestrator,
+  session: Session,
+  body: string,
+  saveSession?: SaveSession,
+): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { error: "Body JSON non valido." } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("text" in parsed) ||
+    typeof parsed.text !== "string" ||
+    parsed.text.trim().length === 0
+  ) {
+    return { status: 400, json: { error: "Campo 'text' mancante." } };
+  }
+
+  try {
+    const { route, model, tool, reply } = await orchestrator.handle(parsed.text, session, {});
+    if (saveSession) await saveSession(session.messages());
+    return { status: 200, json: { route, model, tool, reply } };
+  } catch (e) {
+    return { status: 500, json: { error: (e as Error).message } };
+  }
+}
+
+export async function handleTranslate(translateText: TranslateText, body: string): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { error: "Body JSON non valido." } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("text" in parsed) ||
+    typeof parsed.text !== "string" ||
+    parsed.text.trim().length === 0
+  ) {
+    return { status: 400, json: { error: "Campo 'text' mancante." } };
+  }
+
+  if ("to" in parsed && parsed.to !== undefined && parsed.to !== "en") {
+    return { status: 400, json: { error: "Campo 'to' non supportato." } };
+  }
+
+  const text = parsed.text;
+  try {
+    const translated = await translateText(text, "en");
+    return { status: 200, json: { translated } };
+  } catch {
+    return { status: 200, json: { translated: text } };
+  }
+}
+
+export async function handleSpeak(speakText: SpeakText, body: string): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { error: "Body JSON non valido." } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("text" in parsed) ||
+    typeof parsed.text !== "string" ||
+    parsed.text.trim().length === 0
+  ) {
+    return { status: 400, json: { error: "Campo 'text' mancante." } };
+  }
+
+  try {
+    await speakText(parsed.text.trim());
+    return { status: 200, json: { status: "speaking" } };
+  } catch (e) {
+    return { status: 500, json: { error: (e as Error).message } };
+  }
+}
+
+export async function speakWithSystem(text: string): Promise<void> {
+  if (process.platform !== "darwin") {
+    throw new Error("TTS di sistema disponibile solo su macOS.");
+  }
+
+  const chunks = splitSpeechTextForSystem(text);
+  if (chunks.length === 0) return;
+
+  if (activeSpeech && !activeSpeech.killed) {
+    activeSpeech.kill();
+    activeSpeech = null;
+  }
+
+  for (const chunk of chunks) {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn("say", [chunk], { stdio: "ignore" });
+      activeSpeech = child;
+      child.once("error", reject);
+      child.once("close", (code) => {
+        if (activeSpeech === child) {
+          activeSpeech = null;
+        }
+
+        if (code === 0) {
+          resolve();
+          return;
+        }
+
+        reject(new Error(`TTS di sistema terminato con codice ${code ?? "sconosciuto"}.`));
+      });
+    });
+  }
+}
+
+function sendJson(res: ServerResponse, status: number, json: object): void {
+  res.writeHead(status, {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "Content-Type",
+    "content-type": "application/json; charset=utf-8",
+  });
+  res.end(JSON.stringify(json));
+}
+
+function sendCorsPreflight(res: ServerResponse): void {
+  res.writeHead(204, {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "Content-Type",
+    "access-control-max-age": "86400",
+  });
+  res.end();
+}
+
+async function readBody(req: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+export function createJarvisServer() {
+  const { cfg, registry, orchestrator, session, sessionStore, ready } = createRuntime();
+  return createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+
+    if (req.method === "OPTIONS") {
+      sendCorsPreflight(res);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/health") {
+      sendJson(res, 200, { status: "online", tools: registry.schemas().length });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/stats") {
+      const toolNames = registry.schemas().map((schema) => schema.function.name);
+      sendJson(
+        res,
+        200,
+        collectStats({
+          uptime: () => process.uptime(),
+          cpus: () => os.cpus(),
+          loadAvg: () => os.loadavg(),
+          totalmem: () => os.totalmem(),
+          freemem: () => os.freemem(),
+          models: { local: cfg.modelLocal, api: cfg.modelApi },
+          toolNames,
+        }),
+      );
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/ask") {
+      await ready;
+      const body = await readBody(req);
+      const result = await handleAsk(orchestrator, session, body, (history) => sessionStore.saveSession(history));
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/translate") {
+      const body = await readBody(req);
+      const result = await handleTranslate(
+        (text, to) => translate({ chatLocal, cfg }, text, to),
+        body,
+      );
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/speak") {
+      const body = await readBody(req);
+      const result = await handleSpeak(speakWithSystem, body);
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    sendJson(res, 404, { error: "Not found" });
+  });
+}
+
+const currentModulePath = decodeURIComponent(new URL(import.meta.url).pathname);
+if (process.argv[1] === currentModulePath) {
+  const port = Number(process.env.JARVIS_PORT ?? 8787);
+  createJarvisServer().listen(port, () => {
+    process.stdout.write(`JARVIS HTTP server online on port ${port}\n`);
+  });
+}

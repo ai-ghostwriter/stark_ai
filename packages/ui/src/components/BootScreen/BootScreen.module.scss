@@ -1,0 +1,109 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(0, 212, 245, 0.22), rgba(0, 7, 15, 0.92) 38%, #00070f 72%),
+    #00070f;
+}
+
+.scanline {
+  position: absolute;
+  inset: -30% 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(129, 247, 251, 0.18) 50%, transparent 100%);
+  animation: scan 4s linear infinite;
+}
+
+.card {
+  position: relative;
+  width: min(420px, calc(100vw - 32px));
+  padding: 34px 32px 28px;
+  border: 1px solid rgba(0,212,255,0.6);
+  background: rgba(0, 11, 20, 0.72);
+  box-shadow: var(--glow-cyan-strong);
+  text-align: center;
+}
+
+.logo {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  border: 1px solid var(--color-border-bright);
+  border-radius: 50%;
+  color: var(--color-text-bright);
+  font-size: 34px;
+  line-height: 1;
+  text-shadow: var(--glow-cyan-strong);
+  box-shadow: inset 0 0 18px rgba(0, 212, 245, 0.26), var(--glow-cyan);
+}
+
+.title {
+  color: var(--color-bright);
+  font-size: 22px;
+  letter-spacing: 5px;
+  text-shadow: var(--glow-cyan-strong);
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: var(--color-text-dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.progress {
+  height: 3px;
+  margin: 24px 0 18px;
+  background: rgba(1, 45, 64, 0.9);
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: var(--color-cyan);
+  box-shadow: var(--glow-cyan);
+  animation: load 1.4s ease-in-out infinite;
+}
+
+.lines {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  color: var(--color-text);
+  font-size: 10px;
+  letter-spacing: 2px;
+  list-style: none;
+  text-align: left;
+}
+
+.lines li::before {
+  content: ">";
+  margin-right: 8px;
+  color: var(--color-bright);
+}
+
+@keyframes scan {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(50%);
+  }
+}
+
+@keyframes load {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}

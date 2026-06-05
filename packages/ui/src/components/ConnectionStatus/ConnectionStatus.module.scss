@@ -1,0 +1,27 @@
+.status {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(1, 45, 64, 0.7);
+  padding-bottom: 8px;
+  color: var(--color-text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.row strong {
+  min-width: 0;
+  color: var(--color-bright);
+  font-size: 10px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  text-shadow: var(--glow-cyan);
+}

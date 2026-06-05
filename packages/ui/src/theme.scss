@@ -1,0 +1,21 @@
+:root {
+  --color-bg: #00070f;
+  --color-bg-panel: #000b14;
+  --color-cyan: #00d4f5;
+  --color-bright: #81f7fb;
+  --color-cyan-dim: #0a6f8a;
+  --color-border: #012d40;
+  --color-border-bright: #00d4f5;
+  --color-text: #7ee8f5;
+  --color-text-bright: #c5f8ff;
+  --color-text-dim: #2f7a8a;
+  --glow-cyan: 0 0 8px rgba(0,212,245,0.8), 0 0 22px rgba(0,212,245,0.35);
+  --glow-cyan-strong: 0 0 14px rgba(0,212,245,1), 0 0 35px rgba(0,212,245,0.6), 0 0 60px rgba(0,212,245,0.2);
+  --font-mono: "Courier New", Consolas, "Lucida Console", monospace;
+  --panel-radius: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+}
