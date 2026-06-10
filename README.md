@@ -11,6 +11,20 @@ The two main personas are:
 
 The system allows selecting the runtime mode from the UI among `gemini`, `ollama`, `claude`, and `gpt`. The selected mode is saved in memory in the token server and read by the voice agent when it is dispatched into the LiveKit room.
 
+## What STARK-AI Actually Does
+
+In practice, STARK-AI is a **personal voice assistant you talk to from the browser**, built around three ideas: local-first economics, real task execution, and a production brain for a self-publishing business.
+
+**You speak, it answers — with a personality.** Open the HUD-style dashboard, talk into the microphone, and the assistant listens, thinks, and replies with a synthesized voice. Say `JARVIS` as your first word and you get the formal engineer; anything else and FRIDAY, the blunt personal assistant, takes the call. Persona and LLM backend can also be switched live from the UI without restarting anything.
+
+**Local-first, cloud when it counts.** The Node core routes every request by weight: everyday questions go to a local Ollama model (free, private, works offline), while heavy work — long inputs, manuscript writing, strategic briefs — is automatically escalated to the Anthropic API, picking the cheapest adequate tier (Haiku for classification/extraction, Sonnet for writing/analysis, Opus for manuscript- and strategy-grade tasks). Speech synthesis runs on a local Kokoro container, so in local mode your voice never leaves the machine. The result: an always-on assistant whose marginal cost is near zero, spending API money only where quality demands it.
+
+**It executes, not just chats.** Through tool calling the assistant checks the weather, searches the web, sends e-mail via Gmail, reads files, and tells the time — by voice, end to end.
+
+**It runs a real publishing operation.** The core embeds the operational brain of an Amazon KDP book-production pipeline: it can scaffold a new book project (`newBook`), ingest Helium10 Cerebro keyword research (`ingestCerebro`), report production status (`bookStatus`), and execute workflow phases (`runPhase`). A local semantic knowledge base (`kbIndex`/`kbSearch`, embeddings via `bge-m3`) acts as cross-book brand memory. In concrete terms: you can ask out loud *"where is the book at?"* and get an answer computed from the actual production state on disk.
+
+A typical round trip: the browser captures your voice → LiveKit streams it to the Python agent → STT transcribes it → the Node core routes it (Ollama or Anthropic), possibly invoking tools → the reply comes back as text → Kokoro speaks it in the persona's voice — all locally orchestrated, in a few seconds.
+
 ## Monorepo Architecture
 
 The repository does not have a root `package.json`: Node packages are managed inside `packages/core` and `packages/ui`, while the voice component is Python.

@@ -11,6 +11,20 @@ Le due personas principali sono:
 
 Il sistema permette di selezionare runtime mode dalla UI tra `gemini`, `ollama`, `claude` e `gpt`. La modalità selezionata viene salvata nel token server in memoria e letta dal voice agent quando viene dispatchato nella stanza LiveKit.
 
+## Cosa fa realmente STARK-AI
+
+In pratica, STARK-AI è un **assistente vocale personale con cui parli dal browser**, costruito attorno a tre idee: economia local-first, esecuzione di task reali e un cervello di produzione per un business di self-publishing.
+
+**Parli, risponde — con una personalità.** Apri la dashboard in stile HUD, parli al microfono e l'assistente ascolta, ragiona e risponde con voce sintetizzata. Se la prima parola è `JARVIS` ottieni l'ingegnere formale; in tutti gli altri casi risponde FRIDAY, l'assistente personale diretta e senza filtri. Persona e backend LLM si cambiano anche al volo dalla UI, senza riavviare nulla.
+
+**Local-first, cloud solo quando serve.** Il core Node instrada ogni richiesta in base al peso: le domande quotidiane vanno a un modello Ollama locale (gratis, privato, funziona offline), mentre il lavoro pesante — input lunghi, scrittura manoscritti, brief strategici — viene scalato automaticamente all'API Anthropic, scegliendo il tier più economico adeguato (Haiku per classificazione/estrazione, Sonnet per scrittura/analisi, Opus per task di livello manoscritto e strategia). La sintesi vocale gira su un container Kokoro locale, quindi in modalità locale la tua voce non esce mai dalla macchina. Risultato: un assistente sempre acceso con costo marginale quasi zero, che spende in API solo dove la qualità lo richiede.
+
+**Esegue, non si limita a chattare.** Tramite tool calling l'assistente controlla il meteo, cerca sul web, invia e-mail via Gmail, legge file e dice l'ora — a voce, end to end.
+
+**Gestisce una vera operazione editoriale.** Il core incorpora il cervello operativo di una pipeline di produzione libri Amazon KDP: crea lo scaffold di un nuovo progetto libro (`newBook`), ingerisce le ricerche keyword Helium10 Cerebro (`ingestCerebro`), riporta lo stato di produzione (`bookStatus`) ed esegue le fasi del workflow (`runPhase`). Una knowledge base semantica locale (`kbIndex`/`kbSearch`, embeddings `bge-m3`) fa da brand memory cross-libro. In concreto: puoi chiedere a voce *"a che punto è il libro?"* e ottenere una risposta calcolata dallo stato reale di produzione su disco.
+
+Un giro completo tipico: il browser cattura la voce → LiveKit la trasmette all'agent Python → lo STT la trascrive → il core Node la instrada (Ollama o Anthropic), invocando eventuali tool → la risposta torna come testo → Kokoro la pronuncia con la voce della persona — tutto orchestrato in locale, in pochi secondi.
+
 ## Architettura del monorepo
 
 Il repository non ha un `package.json` root: i pacchetti Node sono gestiti dentro `packages/core` e `packages/ui`, mentre il componente voce è Python.
