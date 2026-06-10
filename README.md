@@ -1,6 +1,6 @@
 # STARK-AI
 
-STARK-AI è un assistente vocale AI locale/cloud in stile Iron Man, pensato per Ricky Stark. Il progetto combina una UI React con LiveKit, un voice agent Python e un core Node/TypeScript che funge da "brain" operativo per routing LLM, memoria di sessione e tool.
+STARK-AI è un assistente vocale AI locale/cloud in stile Iron Man. Il progetto combina una UI React con LiveKit, un voice agent Python e un core Node/TypeScript che funge da "brain" operativo per routing LLM, memoria di sessione e tool.
 
 Le due personas principali sono:
 
