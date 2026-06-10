@@ -1,7 +1,10 @@
 livekit-agents
 livekit
+livekit-api
 fastapi
 uvicorn[standard]
+watchfiles
+aiohttp
 livekit-plugins-openai
 livekit-plugins-silero
 livekit-plugins-google
@@ -13,3 +16,5 @@ langchain_community
 requests
 python-dotenv
 httpx
+pytest
+pytest-asyncio

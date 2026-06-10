@@ -1,7 +1,12 @@
 # packages/voice/agent.py
+import asyncio
+import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from dotenv import load_dotenv
@@ -14,14 +19,14 @@ from livekit.agents import (
     NOT_GIVEN,
 )
 from livekit.agents import llm
-from livekit.plugins import noise_cancellation, silero
+from livekit.plugins import silero
 from livekit.plugins import google, openai
 
 from personas import detect_persona, get_persona
 from tts_kokoro import make_tts
 from tools import get_weather, search_web, send_email
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 DEFAULT_JARVIS_URL = "http://localhost:8787"
 TOKEN_SERVER_URL = os.getenv("TOKEN_SERVER_URL", "http://localhost:8788")
@@ -122,6 +127,16 @@ async def get_mode() -> str:
         return os.getenv("AGENT_MODE", DEFAULT_MODE)
 
 
+async def fetch_persona() -> str:
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{TOKEN_SERVER_URL}/persona")
+            name = resp.json().get("persona", "friday")
+            return name if name in {"jarvis", "friday"} else "friday"
+    except Exception:
+        return "friday"
+
+
 async def notify_persona(persona: str) -> None:
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
@@ -170,12 +185,14 @@ async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> N
     await session.start(
         room=ctx.room,
         agent=Agent(
-            llm=google.beta.realtime.RealtimeModel(voice="Aoede", temperature=0.8),
+            instructions=persona_mod.AGENT_INSTRUCTION,
+            llm=google.beta.realtime.RealtimeModel(
+                voice="Fenrir" if persona_state.get("persona") == "jarvis" else "Aoede",
+                temperature=0.8,
+            ),
             tools=[get_weather, search_web, send_email],
         ),
-        room_input_options=RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVC(),
-        ),
+        room_input_options=RoomInputOptions(),
     )
     await session.generate_reply(instructions=persona_mod.SESSION_INSTRUCTION)
 
@@ -203,22 +220,37 @@ async def start_pipeline_session(
     await session.start(
         room=ctx.room,
         agent=StarkAssistant(persona_state, tools=[get_weather, search_web, send_email]),
-        room_input_options=RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVC(),
-        ),
+        room_input_options=RoomInputOptions(),
     )
     await session.generate_reply(instructions=persona_mod.SESSION_INSTRUCTION)
 
 
 # -- Entry point --------------------------------------------------------------
 
+GEMINI_TIMEOUT_S = 15.0
+
+
 async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
     mode = normalize_mode(await get_mode())
-    persona_state = {"persona": "friday"}
+    persona_state = {"persona": await fetch_persona()}
+    logger.info("Agent dispatched — mode=%s persona=%s room=%s", mode, persona_state["persona"], ctx.room.name)
 
     if mode == "gemini":
-        await start_gemini_session(ctx, persona_state)
+        try:
+            await asyncio.wait_for(
+                start_gemini_session(ctx, persona_state),
+                timeout=GEMINI_TIMEOUT_S,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Gemini session timed out after %.0fs, falling back to gpt pipeline",
+                GEMINI_TIMEOUT_S,
+            )
+            await start_pipeline_session(ctx, "gpt", persona_state)
+        except Exception as exc:
+            logger.warning("Gemini session failed (%s), falling back to gpt pipeline", exc)
+            await start_pipeline_session(ctx, "gpt", persona_state)
     else:
         await start_pipeline_session(ctx, mode, persona_state)
 

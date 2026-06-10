@@ -1,5 +1,7 @@
 # packages/voice/token_server.py
+import logging
 import os
+import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -8,6 +10,11 @@ from livekit import api
 from pydantic import BaseModel
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+_dispatch_cooldown: dict[str, float] = {}
+_DISPATCH_COOLDOWN_S = 5.0
 
 app = FastAPI(title="STARK-AI Token Server")
 
@@ -41,6 +48,26 @@ def require_env(name: str) -> str:
     return value
 
 
+async def dispatch_agent_to_room(
+    *,
+    livekit_url: str,
+    api_key: str,
+    api_secret: str,
+    room_name: str,
+) -> None:
+    livekit_api = api.LiveKitAPI(
+        url=livekit_url,
+        api_key=api_key,
+        api_secret=api_secret,
+    )
+    try:
+        await livekit_api.agent_dispatch.create_dispatch(
+            api.CreateAgentDispatchRequest(room=room_name, agent_name="")
+        )
+    finally:
+        await livekit_api.aclose()
+
+
 @app.get("/mode")
 def get_mode_endpoint():
     return {"mode": _current_mode}
@@ -70,7 +97,7 @@ def set_persona_endpoint(payload: PersonaPayload):
 
 
 @app.get("/token")
-def get_token(room: str = "stark-room", identity: str = "user") -> dict[str, str]:
+async def get_token(room: str = "stark-room", identity: str = "user") -> dict[str, str]:
     livekit_url = require_env("LIVEKIT_URL")
     api_key = require_env("LIVEKIT_API_KEY")
     api_secret = require_env("LIVEKIT_API_SECRET")
@@ -90,6 +117,24 @@ def get_token(room: str = "stark-room", identity: str = "user") -> dict[str, str
         )
         .to_jwt()
     )
+
+    now = time.monotonic()
+    last = _dispatch_cooldown.get(room, 0.0)
+    if now - last >= _DISPATCH_COOLDOWN_S:
+        _dispatch_cooldown[room] = now
+        try:
+            await dispatch_agent_to_room(
+                livekit_url=livekit_url,
+                api_key=api_key,
+                api_secret=api_secret,
+                room_name=room,
+            )
+            logger.info("Agent dispatched to room %s", room)
+        except Exception:
+            _dispatch_cooldown.pop(room, None)
+            logger.exception("Failed to dispatch LiveKit agent for room %s", room)
+    else:
+        logger.debug("Skipping duplicate dispatch for room %s (cooldown %.0fs)", room, _DISPATCH_COOLDOWN_S - (now - last))
 
     return {"token": token, "url": livekit_url}
 
