@@ -1,17 +1,19 @@
+🇬🇧 English | [🇮🇹 Italiano](README.it.md)
+
 # STARK-AI
 
-STARK-AI è un assistente vocale AI locale/cloud in stile Iron Man. Il progetto combina una UI React con LiveKit, un voice agent Python e un core Node/TypeScript che funge da "brain" operativo per routing LLM, memoria di sessione e tool.
+STARK-AI is a local/cloud AI voice assistant in Iron Man style. The project combines a React UI with LiveKit, a Python voice agent, and a Node/TypeScript core that acts as the operational "brain" for LLM routing, session memory, and tools.
 
-Le due personas principali sono:
+The two main personas are:
 
-- **JARVIS**: formale, tecnico, preciso, orientato ad analisi ingegneristica, debugging, architetture e decisioni strutturate.
-- **FRIDAY**: concisa, critica, diretta, con giudizio senza filtri e tono da assistente personale.
+- **JARVIS**: formal, technical, precise, oriented toward engineering analysis, debugging, architectures, and structured decisions.
+- **FRIDAY**: concise, critical, direct, with unfiltered judgment and a personal-assistant tone.
 
-Il sistema permette di selezionare runtime mode dalla UI tra `gemini`, `ollama`, `claude` e `gpt`. La modalità selezionata viene salvata nel token server in memoria e letta dal voice agent quando viene dispatchato nella stanza LiveKit.
+The system allows selecting the runtime mode from the UI among `gemini`, `ollama`, `claude`, and `gpt`. The selected mode is saved in memory in the token server and read by the voice agent when it is dispatched into the LiveKit room.
 
-## Architettura del monorepo
+## Monorepo Architecture
 
-Il repository non ha un `package.json` root: i pacchetti Node sono gestiti dentro `packages/core` e `packages/ui`, mentre il componente voce è Python.
+The repository does not have a root `package.json`: Node packages are managed inside `packages/core` and `packages/ui`, while the voice component is Python.
 
 ```text
 STARK-AI/
@@ -30,21 +32,21 @@ STARK-AI/
     └── voice/
 ```
 
-### Flusso runtime
+### Runtime Flow
 
 ```text
 Browser React UI
   └─ GET /token, GET/POST /mode, GET/POST /persona
-     via proxy Vite verso Token Server FastAPI :8788
-        ├─ genera token LiveKit
-        ├─ dispatcha il voice agent nella room
-        └─ mantiene mode/persona correnti in memoria
+     via Vite proxy to FastAPI Token Server :8788
+        ├─ generates LiveKit token
+        ├─ dispatches the voice agent into the room
+        └─ keeps current mode/persona in memory
 
 LiveKit Room
   └─ Voice Agent Python
-     ├─ Gemini realtime se mode=gemini
-     ├─ pipeline STT/LLM/TTS se mode=gpt
-     └─ bridge HTTP verso Core Node se mode=ollama o mode=claude
+     ├─ Gemini realtime if mode=gemini
+     ├─ STT/LLM/TTS pipeline if mode=gpt
+     └─ HTTP bridge to Core Node if mode=ollama or mode=claude
 
 Core Node :8787
   ├─ POST /ask
@@ -54,64 +56,64 @@ Core Node :8787
   └─ GET /stats
 ```
 
-## Packages principali
+## Main Packages
 
 ### `packages/ui`
 
-Frontend React/Vite per la dashboard vocale. Usa:
+React/Vite frontend for the voice dashboard. It uses:
 
-- `react` e `react-dom`
+- `react` and `react-dom`
 - `@livekit/components-react`
 - `livekit-client`
 - `sass`
-- Vite con proxy locale verso `http://localhost:8788`
+- Vite with local proxy to `http://localhost:8788`
 
-File rilevanti:
+Relevant files:
 
-- `src/App.tsx`: richiede il token LiveKit a `/token`, apre `LiveKitRoom`, mostra boot/error screen e shell principale.
-- `src/components/Header/Header.tsx`: mostra persona corrente, stato voice agent, orologio e selettori `FRIDAY/JARVIS` e `GEMINI/OLLAMA/CLAUDE/GPT`.
-- `vite.config.ts`: espone la UI su porta `5173` e proxya `/token`, `/mode`, `/persona` al token server.
+- `src/App.tsx`: requests the LiveKit token from `/token`, opens `LiveKitRoom`, and shows the boot/error screen and main shell.
+- `src/components/Header/Header.tsx`: shows the current persona, voice agent status, clock, and the `FRIDAY/JARVIS` and `GEMINI/OLLAMA/CLAUDE/GPT` selectors.
+- `vite.config.ts`: exposes the UI on port `5173` and proxies `/token`, `/mode`, `/persona` to the token server.
 
 ### `packages/voice`
 
-Layer Python per LiveKit Agents, token server e personas.
+Python layer for LiveKit Agents, token server, and personas.
 
-File rilevanti:
+Relevant files:
 
-- `agent.py`: entrypoint LiveKit agent. Legge mode/persona dal token server, avvia Gemini realtime oppure una pipeline STT/LLM/TTS.
-- `token_server.py`: FastAPI server su porta `8788`; genera token LiveKit, dispatcha l'agent e gestisce `mode`/`persona`.
-- `tts_kokoro.py`: adapter TTS compatibile OpenAI verso Kokoro locale (`KOKORO_URL`).
-- `tools.py`: tool vocali `get_weather`, `search_web`, `send_email`.
-- `personas/jarvis.py`: prompt, istruzione sessione e voce Kokoro per JARVIS.
-- `personas/friday.py`: prompt, istruzione sessione e voce Kokoro per FRIDAY.
-- `personas/detect.py`: detection minimale: se la prima parola dell'utente è `JARVIS`, sceglie JARVIS; altrimenti FRIDAY.
+- `agent.py`: LiveKit agent entrypoint. Reads mode/persona from the token server, starts Gemini realtime or an STT/LLM/TTS pipeline.
+- `token_server.py`: FastAPI server on port `8788`; generates LiveKit tokens, dispatches the agent, and manages `mode`/`persona`.
+- `tts_kokoro.py`: OpenAI-compatible TTS adapter to local Kokoro (`KOKORO_URL`).
+- `tools.py`: voice tools `get_weather`, `search_web`, `send_email`.
+- `personas/jarvis.py`: prompt, session instruction, and Kokoro voice for JARVIS.
+- `personas/friday.py`: prompt, session instruction, and Kokoro voice for FRIDAY.
+- `personas/detect.py`: minimal detection: if the user's first word is `JARVIS`, selects JARVIS; otherwise FRIDAY.
 
 ### `packages/core`
 
-Core Node/TypeScript del brain JARVIS.
+Node/TypeScript core of the JARVIS brain.
 
-Responsabilità principali:
+Main responsibilities:
 
-- server HTTP su porta `8787`;
-- orchestrazione conversazione/sessione;
-- routing locale/API;
-- registry tool;
-- integrazione Ollama locale;
-- integrazione Anthropic API;
-- endpoint utility per traduzione, speak di sistema macOS, health e stats.
+- HTTP server on port `8787`;
+- conversation/session orchestration;
+- local/API routing;
+- tool registry;
+- local Ollama integration;
+- Anthropic API integration;
+- utility endpoints for translation, macOS system speak, health, and stats.
 
-File rilevanti:
+Relevant files:
 
-- `src/server.ts`: crea server HTTP e registra endpoint `/ask`, `/translate`, `/speak`, `/health`, `/stats`.
-- `src/config.ts`: carica modelli, URL Ollama, soglie di routing e path sessione.
-- `src/core/router.ts`: decide `local` vs `api`.
-- `src/core/tier.ts`: sceglie tier API `haiku`, `sonnet`, `opus`.
-- `src/core/orchestrator.ts`: costruisce messaggi, chiama Ollama o Anthropic, gestisce tool calls locali.
-- `src/llm/ollama.ts`: client `/api/chat` per Ollama.
-- `src/llm/anthropic.ts`: client Anthropic Messages API.
-- `src/tools/builtins/*`: tool locali registrati nel core, inclusi tempo, meteo, file read, KDP/book workflow e knowledge base.
+- `src/server.ts`: creates the HTTP server and registers endpoints `/ask`, `/translate`, `/speak`, `/health`, `/stats`.
+- `src/config.ts`: loads models, Ollama URL, routing thresholds, and session path.
+- `src/core/router.ts`: decides `local` vs `api`.
+- `src/core/tier.ts`: chooses API tier `haiku`, `sonnet`, `opus`.
+- `src/core/orchestrator.ts`: builds messages, calls Ollama or Anthropic, and handles local tool calls.
+- `src/llm/ollama.ts`: `/api/chat` client for Ollama.
+- `src/llm/anthropic.ts`: Anthropic Messages API client.
+- `src/tools/builtins/*`: local tools registered in the core, including time, weather, file read, KDP/book workflow, and knowledge base.
 
-## Stack tecnologico
+## Technology Stack
 
 ### Frontend
 
@@ -125,9 +127,9 @@ File rilevanti:
 
 - Node.js
 - TypeScript
-- HTTP server nativo Node
+- Native Node HTTP server
 - Anthropic SDK
-- Vitest per i test del core
+- Vitest for core tests
 
 ### Voice/AI
 
@@ -135,31 +137,31 @@ File rilevanti:
 - FastAPI + Uvicorn
 - LiveKit Agents
 - LiveKit API
-- Plugin LiveKit: OpenAI, Google, Anthropic, Silero, noise cancellation
-- OpenAI STT nella pipeline non-Gemini
-- Google Gemini Realtime nella modalità `gemini`
-- Kokoro FastAPI come TTS locale compatibile OpenAI
-- Ollama come LLM locale del core
-- Anthropic come API LLM per task pesanti nel core
+- LiveKit plugins: OpenAI, Google, Anthropic, Silero, noise cancellation
+- OpenAI STT in the non-Gemini pipeline
+- Google Gemini Realtime in `gemini` mode
+- Kokoro FastAPI as local OpenAI-compatible TTS
+- Ollama as the core local LLM
+- Anthropic as LLM API for heavy tasks in the core
 
-### Infra locale
+### Local Infra
 
-- Docker Compose per Kokoro TTS
-- Config LiveKit locale in `docker/livekit/livekit.yaml`
-- Script orchestratore `start.sh`
-- File `.env` caricato da Python e Bash
+- Docker Compose for Kokoro TTS
+- Local LiveKit config in `docker/livekit/livekit.yaml`
+- Orchestrator script `start.sh`
+- `.env` file loaded by Python and Bash
 
-## Configurazione
+## Configuration
 
-1. Copia il file env:
+1. Copy the env file:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Compila le variabili necessarie in `.env`.
+2. Fill in the required variables in `.env`.
 
-Variabili presenti in `.env.example`:
+Variables present in `.env.example`:
 
 ```bash
 LIVEKIT_URL=ws://localhost:7880
@@ -179,19 +181,19 @@ TOKEN_SERVER_URL=http://localhost:8788
 OLLAMA_MODEL=qwen3:8b
 ```
 
-Note importanti:
+Important notes:
 
-- `start.sh` esporta `JARVIS_MODEL_LOCAL` usando `OLLAMA_MODEL` se `JARVIS_MODEL_LOCAL` non è già impostata.
-- Il core usa anche default non presenti in `.env.example`: `OLLAMA_URL=http://localhost:11434`, `JARVIS_MODEL_API=claude-sonnet-4-6`, `JARVIS_MODEL_API_HAIKU=claude-haiku-4-5-20251001`, `JARVIS_MODEL_API_OPUS=claude-opus-4-8`, `JARVIS_EMBED_MODEL=bge-m3`.
-- Per `mode=claude` nel voice agent, la richiesta passa comunque dal core Node; nel core il routing API usa Anthropic quando la richiesta viene classificata come pesante o forzata via context interno.
-- Per `mode=gpt`, il voice agent usa direttamente `openai.LLM(model="gpt-4o-mini")`.
-- Per `mode=gemini`, il voice agent usa `google.beta.realtime.RealtimeModel`.
-- `docker/docker-compose.yml` avvia solo Kokoro TTS. Non avvia LiveKit.
-- `docker/livekit/livekit.yaml` contiene una configurazione LiveKit locale con porta `7880`, chiave `devkey` e secret `devsecret`, ma non è collegata al compose attuale.
+- `start.sh` exports `JARVIS_MODEL_LOCAL` using `OLLAMA_MODEL` if `JARVIS_MODEL_LOCAL` is not already set.
+- The core also uses defaults not present in `.env.example`: `OLLAMA_URL=http://localhost:11434`, `JARVIS_MODEL_API=claude-sonnet-4-6`, `JARVIS_MODEL_API_HAIKU=claude-haiku-4-5-20251001`, `JARVIS_MODEL_API_OPUS=claude-opus-4-8`, `JARVIS_EMBED_MODEL=bge-m3`.
+- For `mode=claude` in the voice agent, the request still goes through the Node core; in the core, API routing uses Anthropic when the request is classified as heavy or forced via internal context.
+- For `mode=gpt`, the voice agent directly uses `openai.LLM(model="gpt-4o-mini")`.
+- For `mode=gemini`, the voice agent uses `google.beta.realtime.RealtimeModel`.
+- `docker/docker-compose.yml` starts only Kokoro TTS. It does not start LiveKit.
+- `docker/livekit/livekit.yaml` contains a local LiveKit configuration with port `7880`, key `devkey`, and secret `devsecret`, but it is not connected to the current compose file.
 
-## Setup dipendenze
+## Dependency Setup
 
-Installa le dipendenze Node dei due package:
+Install the Node dependencies of the two packages:
 
 ```bash
 cd packages/core
@@ -201,192 +203,192 @@ cd ../ui
 npm install
 ```
 
-Il virtualenv Python di `packages/voice` viene creato automaticamente da `start.sh` se manca:
+The Python virtualenv for `packages/voice` is created automatically by `start.sh` if missing:
 
 ```bash
 python3 -m venv packages/voice/.venv
 packages/voice/.venv/bin/python -m pip install -r packages/voice/requirements.txt
 ```
 
-Normalmente non serve eseguire questi due comandi a mano, salvo setup manuale o debug.
+Normally you do not need to run these two commands manually, except for manual setup or debugging.
 
-Assicurati inoltre che Docker sia attivo e, se usi Ollama:
+Also make sure Docker is running and, if you use Ollama:
 
 ```bash
 ollama serve
 ollama pull qwen3:8b
 ```
 
-Se usi anche embeddings/KD knowledge base del core, prepara il modello configurato in `JARVIS_EMBED_MODEL` (default `bge-m3`).
+If you also use the core embeddings/KD knowledge base, prepare the model configured in `JARVIS_EMBED_MODEL` (default `bge-m3`).
 
-## Avvio locale step by step
+## Step-by-Step Local Startup
 
-### Avvio completo con script
+### Full Startup With Script
 
-Dalla root del progetto:
+From the project root:
 
 ```bash
 ./start.sh
 ```
 
-Lo script esegue queste operazioni:
+The script performs these operations:
 
-1. verifica che `.env` esista;
-2. carica le variabili ambiente;
-3. crea `packages/voice/.venv` se assente;
-4. installa `packages/voice/requirements.txt` se il venv viene creato;
-5. avvia Docker Compose per Kokoro TTS;
-6. avvia il core Node su `http://localhost:8787`;
-7. avvia il token server su `http://localhost:8788`;
-8. avvia il voice agent LiveKit;
-9. avvia la UI Vite su `http://localhost:5173`.
+1. checks that `.env` exists;
+2. loads environment variables;
+3. creates `packages/voice/.venv` if absent;
+4. installs `packages/voice/requirements.txt` if the venv is created;
+5. starts Docker Compose for Kokoro TTS;
+6. starts the Node core on `http://localhost:8787`;
+7. starts the token server on `http://localhost:8788`;
+8. starts the LiveKit voice agent;
+9. starts the Vite UI on `http://localhost:5173`.
 
-Endpoint/servizi attesi:
+Expected endpoints/services:
 
 ```text
 UI:            http://localhost:5173
 Token server:  http://localhost:8788
 Core Node:     http://localhost:8787
 Kokoro TTS:    http://localhost:8880
-LiveKit:       configurato da LIVEKIT_URL
+LiveKit:       configured by LIVEKIT_URL
 ```
 
-Per fermare tutto:
+To stop everything:
 
 ```text
 CTRL+C
 ```
 
-La trap di `start.sh` termina i processi figli e ferma il compose Kokoro con:
+The `start.sh` trap terminates child processes and stops the Kokoro compose with:
 
 ```bash
 docker compose -f docker/docker-compose.yml down
 ```
 
-### Avvio manuale
+### Manual Startup
 
-Utile per debug dei singoli layer.
+Useful for debugging individual layers.
 
-Terminale 1, Kokoro:
+Terminal 1, Kokoro:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Terminale 2, core Node:
+Terminal 2, Core Node:
 
 ```bash
 cd packages/core
 npm run serve
 ```
 
-Terminale 3, token server:
+Terminal 3, token server:
 
 ```bash
 cd packages/voice
 .venv/bin/python token_server.py
 ```
 
-Terminale 4, voice agent:
+Terminal 4, voice agent:
 
 ```bash
 cd packages/voice
 .venv/bin/python agent.py dev
 ```
 
-Terminale 5, UI:
+Terminal 5, UI:
 
 ```bash
 cd packages/ui
 npm run dev -- --port 5173
 ```
 
-## Modalità e routing AI
+## AI Modes and Routing
 
-### Modalità voice agent
+### Voice Agent Modes
 
-Il token server mantiene `_current_mode`, inizialmente `gemini`. La UI legge e modifica questa modalità tramite:
+The token server keeps `_current_mode`, initially `gemini`. The UI reads and changes this mode through:
 
 - `GET /mode`
-- `POST /mode` con `{ "mode": "gemini" | "ollama" | "claude" | "gpt" }`
+- `POST /mode` with `{ "mode": "gemini" | "ollama" | "claude" | "gpt" }`
 
-Il voice agent legge la modalità con `GET {TOKEN_SERVER_URL}/mode` e normalizza i valori ammessi:
+The voice agent reads the mode with `GET {TOKEN_SERVER_URL}/mode` and normalizes the allowed values:
 
 ```text
 gemini | ollama | claude | gpt
 ```
 
-Comportamento reale in `packages/voice/agent.py`:
+Actual behavior in `packages/voice/agent.py`:
 
-- `gemini`: avvia una sessione Gemini realtime con voce `Fenrir` per JARVIS e `Aoede` per FRIDAY; in caso di timeout o errore fa fallback alla pipeline `gpt`.
-- `gpt`: usa pipeline LiveKit con OpenAI STT, Silero VAD, OpenAI LLM `gpt-4o-mini` e Kokoro TTS.
-- `ollama`: usa pipeline STT/VAD/TTS, ma l'LLM è `JarvisLLM`, un bridge HTTP verso `POST {JARVIS_URL}/ask`.
-- `claude`: nel voice agent usa lo stesso bridge `JarvisLLM` verso il core; la scelta effettiva tra Ollama e Anthropic avviene nel core Node.
+- `gemini`: starts a Gemini realtime session with voice `Fenrir` for JARVIS and `Aoede` for FRIDAY; on timeout or error it falls back to the `gpt` pipeline.
+- `gpt`: uses the LiveKit pipeline with OpenAI STT, Silero VAD, OpenAI LLM `gpt-4o-mini`, and Kokoro TTS.
+- `ollama`: uses the STT/VAD/TTS pipeline, but the LLM is `JarvisLLM`, an HTTP bridge to `POST {JARVIS_URL}/ask`.
+- `claude`: in the voice agent, uses the same `JarvisLLM` bridge to the core; the actual choice between Ollama and Anthropic happens in the Node core.
 
-### Routing nel core Node
+### Routing in the Node Core
 
-Il core decide tra:
+The core decides between:
 
-- `local`: Ollama, modello `JARVIS_MODEL_LOCAL` o default `qwen3:8b`;
-- `api`: Anthropic, tier `haiku`, `sonnet` o `opus`.
+- `local`: Ollama, model `JARVIS_MODEL_LOCAL` or default `qwen3:8b`;
+- `api`: Anthropic, tier `haiku`, `sonnet`, or `opus`.
 
-Regole principali in `src/core/router.ts`:
+Main rules in `src/core/router.ts`:
 
-- override esplicito `local` o `api` se passato nel context interno;
-- API se `ctx.heavy` è true;
-- API se input supera `JARVIS_HEAVY_CHARS` (default `4000`);
-- API se l'input contiene pattern pesanti come `scrivi il capitolo`, `scrivi il libro`, `manoscritto`, `brief strategico`, `outline completo`;
-- altrimenti default locale via Ollama.
+- explicit override `local` or `api` if passed in the internal context;
+- API if `ctx.heavy` is true;
+- API if input exceeds `JARVIS_HEAVY_CHARS` (default `4000`);
+- API if the input contains heavy patterns such as `scrivi il capitolo`, `scrivi il libro`, `manoscritto`, `brief strategico`, `outline completo`;
+- otherwise local default via Ollama.
 
-Tier API in `src/core/tier.ts`:
+API tiers in `src/core/tier.ts`:
 
-- `haiku`: estrazione, classificazione, riassunto, traduzione;
-- `sonnet`: scrittura, analisi, copy;
-- `opus`: manoscritto, strategia e pattern opus-grade.
+- `haiku`: extraction, classification, summary, translation;
+- `sonnet`: writing, analysis, copy;
+- `opus`: manuscript, strategy, and opus-grade patterns.
 
-## Personas JARVIS/FRIDAY
+## JARVIS/FRIDAY Personas
 
-La persona corrente è mantenuta dal token server, inizialmente `friday`.
+The current persona is kept by the token server, initially `friday`.
 
-Endpoint:
+Endpoints:
 
 - `GET /persona`
-- `POST /persona` con `{ "persona": "jarvis" | "friday" }`
+- `POST /persona` with `{ "persona": "jarvis" | "friday" }`
 
-La UI permette selezione manuale da Header. Il voice agent può anche rilevare la persona dal primo turno utente:
+The UI allows manual selection from the Header. The voice agent can also detect the persona from the first user turn:
 
-- se la prima parola è `JARVIS`, imposta `jarvis`;
-- in tutti gli altri casi imposta `friday`.
+- if the first word is `JARVIS`, sets `jarvis`;
+- in all other cases sets `friday`.
 
-Voci Kokoro configurate:
+Configured Kokoro voices:
 
 ```text
 JARVIS -> am_adam
 FRIDAY -> af_sky
 ```
 
-Nella modalità Gemini realtime, invece, le voci configurate sono:
+In Gemini realtime mode, instead, the configured voices are:
 
 ```text
 JARVIS -> Fenrir
 FRIDAY -> Aoede
 ```
 
-## Tool disponibili
+## Available Tools
 
-### Tool del voice agent
+### Voice Agent Tools
 
-Definiti in `packages/voice/tools.py`:
+Defined in `packages/voice/tools.py`:
 
-- `get_weather(city)`: meteo da `wttr.in`;
-- `search_web(query)`: ricerca DuckDuckGo via LangChain community tool;
-- `send_email(to_email, subject, message, cc_email?)`: invio via Gmail SMTP usando `GMAIL_USER` e `GMAIL_APP_PASSWORD`.
+- `get_weather(city)`: weather from `wttr.in`;
+- `search_web(query)`: DuckDuckGo search via LangChain community tool;
+- `send_email(to_email, subject, message, cc_email?)`: send through Gmail SMTP using `GMAIL_USER` and `GMAIL_APP_PASSWORD`.
 
-Queste variabili Gmail non sono presenti in `.env.example`, quindi vanno aggiunte manualmente se si vuole usare `send_email`.
+These Gmail variables are not present in `.env.example`, so they must be added manually if you want to use `send_email`.
 
-### Tool del core Node
+### Node Core Tools
 
-Registrati in `packages/core/src/server.ts`:
+Registered in `packages/core/src/server.ts`:
 
 - `time`
 - `weather`
@@ -398,9 +400,9 @@ Registrati in `packages/core/src/server.ts`:
 - `kbIndex`
 - `kbSearch`
 
-Sono esposti al modello locale Ollama tramite tool calling nel registry del core.
+They are exposed to the local Ollama model through tool calling in the core registry.
 
-## Test e controlli
+## Tests and Checks
 
 Core Node:
 
@@ -424,13 +426,13 @@ cd packages/voice
 .venv/bin/python -m pytest
 ```
 
-Health check core:
+Core health check:
 
 ```bash
 curl http://localhost:8787/health
 ```
 
-Stats core:
+Core stats:
 
 ```bash
 curl http://localhost:8787/stats
@@ -443,11 +445,11 @@ curl http://localhost:8788/mode
 curl http://localhost:8788/persona
 ```
 
-## Note operative
+## Operational Notes
 
-- `.env` è ignorato da Git; usare `.env.example` come template.
-- `node_modules`, `.venv`, `dist`, `__pycache__` e `.jarvis` sono ignorati.
-- Il file sessione default del core è `.jarvis/session.json` dentro la working directory del processo `packages/core`.
-- `POST /speak` del core usa il comando macOS `say`; su sistemi non macOS restituisce errore.
-- `start.sh` presume che `npm install` sia già stato eseguito in `packages/core` e `packages/ui`.
-- Se `LIVEKIT_URL` punta a un LiveKit cloud, servono chiave e secret cloud coerenti. Se punta a `ws://localhost:7880`, serve un server LiveKit locale avviato separatamente con configurazione compatibile con `docker/livekit/livekit.yaml`.
+- `.env` is ignored by Git; use `.env.example` as a template.
+- `node_modules`, `.venv`, `dist`, `__pycache__`, and `.jarvis` are ignored.
+- The core default session file is `.jarvis/session.json` inside the working directory of the `packages/core` process.
+- `POST /speak` in the core uses the macOS `say` command; on non-macOS systems it returns an error.
+- `start.sh` assumes that `npm install` has already been run in `packages/core` and `packages/ui`.
+- If `LIVEKIT_URL` points to a LiveKit cloud, matching cloud key and secret are required. If it points to `ws://localhost:7880`, a local LiveKit server must be started separately with a configuration compatible with `docker/livekit/livekit.yaml`.
