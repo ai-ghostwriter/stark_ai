@@ -80,6 +80,24 @@ export class FakeBrain {
       return;
     }
 
+    const weatherCity = this.detectWeather(event.text);
+    if (weatherCity) {
+      await this.handleToolIntent("weather_report", { city: weatherCity }, (ok, data) => {
+        if (!ok) return `Non sono riuscita a recuperare il meteo per ${weatherCity}.`;
+        return this.summaryFromToolData(data) ?? `Meteo recuperato per ${weatherCity}.`;
+      }, emit);
+      return;
+    }
+
+    const searchQuery = this.detectSearch(event.text);
+    if (searchQuery) {
+      await this.handleToolIntent("web_search", { query: searchQuery, maxResults: 3 }, (ok, data) => {
+        if (!ok) return `Non sono riuscita a cercare ${searchQuery}.`;
+        return this.summaryFromToolData(data) ?? `Ho trovato risultati per ${searchQuery}.`;
+      }, emit);
+      return;
+    }
+
     const active = this.personas.get(this.activePersonas.current());
     const route = decide(
       event.text,
@@ -123,27 +141,53 @@ export class FakeBrain {
     return match?.[1]?.trim() || null;
   }
 
-  private async handleOpenApp(appName: string, emit: BrainEmitter): Promise<void> {
-    const callId = randomUUID();
-    const args = { appName };
-    emit({ v: 1, type: "tool.call", id: callId, name: "open_app", args });
+  private detectWeather(text: string): string | null {
+    const normalized = text.trim();
+    const match = /^(?:che tempo fa|weather)(?:\s+(?:a|in|for))?\s*(.*?)\s*$/i.exec(normalized);
+    if (!match) return null;
+    return match[1]?.trim() || "Roma";
+  }
 
-    const tool = this.tools?.get("open_app");
+  private detectSearch(text: string): string | null {
+    const match = /^(?:cerca|search)\s+(.+?)\s*$/i.exec(text.trim());
+    return match?.[1]?.trim() || null;
+  }
+
+  private async handleOpenApp(appName: string, emit: BrainEmitter): Promise<void> {
+    await this.handleToolIntent("open_app", { appName }, (ok) => (
+      ok ? `Ho aperto ${appName}.` : `Non sono riuscita ad aprire ${appName}.`
+    ), emit, `Non ho il tool open_app disponibile per aprire ${appName}.`);
+  }
+
+  private async handleToolIntent(
+    name: string,
+    args: Record<string, unknown>,
+    speakText: (ok: boolean, data: unknown) => string,
+    emit: BrainEmitter,
+    unavailableText = `Non ho il tool ${name} disponibile.`,
+  ): Promise<void> {
+    const callId = randomUUID();
+    emit({ v: 1, type: "tool.call", id: callId, name, args });
+
+    const tool = this.tools?.get(name);
     if (!tool) {
-      const data = { ok: false, error: { code: "TOOL_UNAVAILABLE", message: "open_app is not registered." } };
+      const data = { ok: false, error: { code: "TOOL_UNAVAILABLE", message: `${name} is not registered.` } };
       emit({ v: 1, type: "tool.result", id: callId, ok: false, data });
-      emit({ v: 1, type: "tts.speak", text: `Non ho il tool open_app disponibile per aprire ${appName}.`, persona: this.activePersonas.current() });
+      emit({ v: 1, type: "tts.speak", text: unavailableText, persona: this.activePersonas.current() });
       return;
     }
 
     const data = await tool.handler(args);
     const ok = typeof data === "object" && data !== null && "ok" in data ? Boolean((data as { ok: unknown }).ok) : true;
     emit({ v: 1, type: "tool.result", id: callId, ok, data });
-    emit({
-      v: 1,
-      type: "tts.speak",
-      text: ok ? `Ho aperto ${appName}.` : `Non sono riuscita ad aprire ${appName}.`,
-      persona: this.activePersonas.current(),
-    });
+    emit({ v: 1, type: "tts.speak", text: speakText(ok, data), persona: this.activePersonas.current() });
+  }
+
+  private summaryFromToolData(data: unknown): string | null {
+    if (typeof data !== "object" || data === null) return typeof data === "string" ? data : null;
+    const maybeData = "data" in data ? (data as { data?: unknown }).data : data;
+    if (typeof maybeData !== "object" || maybeData === null) return typeof maybeData === "string" ? maybeData : null;
+    const summary = (maybeData as { summary?: unknown }).summary;
+    return typeof summary === "string" && summary.trim() ? summary : null;
   }
 }

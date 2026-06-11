@@ -231,4 +231,44 @@ describe("FakeBrain", () => {
       { v: 1, type: "tts.speak", text: "Ho aperto Calculator.", persona: "jarvis" },
     ]);
   });
+
+  it("dispatches weather_report for weather voice intents", async () => {
+    const registry = new Registry();
+    registry.register({
+      name: "weather_report",
+      description: "weather",
+      parameters: {},
+      handler: async () => ({ ok: true, data: { summary: "Rome: 24°C, humidity 55%, wind 8 km/h" } }),
+    });
+    const fakeBrain = brain({ tools: registry });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle({ v: 1, type: "stt.final", text: "che tempo fa a Roma", lang: "it" }, (event) => emitted.push(event));
+
+    expect(emitted).toEqual([
+      expect.objectContaining({ v: 1, type: "tool.call", name: "weather_report", args: { city: "Roma" } }),
+      expect.objectContaining({ v: 1, type: "tool.result", ok: true }),
+      { v: 1, type: "tts.speak", text: "Rome: 24°C, humidity 55%, wind 8 km/h", persona: "jarvis" },
+    ]);
+  });
+
+  it("dispatches web_search for search voice intents and speaks top results", async () => {
+    const registry = new Registry();
+    registry.register({
+      name: "web_search",
+      description: "search",
+      parameters: {},
+      handler: async () => ({ ok: true, data: { summary: "1. Ricette per diabetici: idee a basso indice glicemico" } }),
+    });
+    const fakeBrain = brain({ tools: registry });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle({ v: 1, type: "stt.final", text: "cerca ricette diabetici", lang: "it" }, (event) => emitted.push(event));
+
+    expect(emitted).toEqual([
+      expect.objectContaining({ v: 1, type: "tool.call", name: "web_search", args: { query: "ricette diabetici", maxResults: 3 } }),
+      expect.objectContaining({ v: 1, type: "tool.result", ok: true }),
+      { v: 1, type: "tts.speak", text: "1. Ricette per diabetici: idee a basso indice glicemico", persona: "jarvis" },
+    ]);
+  });
 });
