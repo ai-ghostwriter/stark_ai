@@ -49,7 +49,10 @@ def build_core_tool(definition: dict, core_url: str, *, caller: Caller | None = 
     async def handler(raw_arguments: dict[str, object]) -> str:
         result = await call(call_url, {"name": name, "args": raw_arguments})
         if isinstance(result, dict) and result.get("ok") is True:
-            return json.dumps(result.get("data"), ensure_ascii=False)
+            data = result.get("data")
+            if isinstance(data, str):
+                return data
+            return json.dumps(data, ensure_ascii=False)
         error = (result or {}).get("error", {}) if isinstance(result, dict) else {}
         code = error.get("code", "TOOL_ERROR")
         message = error.get("message", "tool call failed")

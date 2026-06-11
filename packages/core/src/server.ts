@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import os from "node:os";
+import { publishRenderEvent } from "./bus/hubPublisher.js";
 import { loadConfig } from "./config.js";
 import { Registry } from "./tools/registry.js";
 import { registerBuiltInTools } from "./tools/runtime.js";
@@ -12,6 +14,7 @@ import { translate } from "./core/translate.js";
 import { Orchestrator } from "./core/orchestrator.js";
 import { chatLocal } from "./llm/ollama.js";
 import { chatApi } from "./llm/anthropic.js";
+import { isRenderResult } from "./tools/render.js";
 import type { Result, RouteCtx } from "./llm/types.js";
 
 interface AskOrchestrator {
@@ -180,6 +183,20 @@ export async function handleToolsCall(registry: Registry, body: string): Promise
   const args = "args" in parsed && parsed.args !== undefined ? parsed.args : {};
   try {
     const result = await tool.handler(args as Record<string, unknown>);
+    if (isRenderResult(result)) {
+      await publishRenderEvent({
+        v: 1,
+        type: "render.event",
+        id: randomUUID(),
+        ts: Date.now(),
+        tool: parsed.name,
+        render: result.render.type,
+        title: result.render.title,
+        spoken: result.spoken,
+        payload: result.render.payload,
+      });
+      return { status: 200, json: { ok: true, data: result.spoken } };
+    }
     // MCP handles already return a structured ToolResult; plain in-process results get wrapped.
     const json = isToolResultShape(result) ? result : { ok: true, data: result };
     return { status: 200, json };

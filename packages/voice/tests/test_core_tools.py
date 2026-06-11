@@ -56,6 +56,18 @@ async def test_tool_handler_posts_to_tools_call_and_returns_data() -> None:
 
 
 @pytest.mark.asyncio
+async def test_tool_handler_returns_string_data_without_json_quotes() -> None:
+    async def caller(url: str, payload: dict) -> dict:
+        return {"ok": True, "data": "Tre segnali oggi."}
+
+    tool = build_core_tool(SAMPLE_DEFS[0], "http://core:8787", caller=caller)
+    handler = getattr(tool, "__wrapped_core_handler__")
+    result = await handler({"city": "Milano"})
+
+    assert result == "Tre segnali oggi."
+
+
+@pytest.mark.asyncio
 async def test_tool_handler_surfaces_structured_errors_as_text() -> None:
     async def caller(url: str, payload: dict) -> dict:
         return {"ok": False, "error": {"code": "TOOL_TIMEOUT", "message": "timed out"}}

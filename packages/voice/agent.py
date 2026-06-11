@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 import httpx
 from dotenv import load_dotenv
+from google.genai import types
 from livekit import agents
 from livekit.agents import AgentSession, Agent, RoomInputOptions
 from livekit.agents import (
@@ -210,6 +211,7 @@ async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> A
             llm=google.beta.realtime.RealtimeModel(
                 voice="Fenrir" if persona_state.get("persona") == "jarvis" else "Aoede",
                 temperature=0.8,
+                output_audio_transcription=types.AudioTranscriptionConfig(languageCodes=["it-IT"]),
             ),
             tools=session_tools,
         ),

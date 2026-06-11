@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { WebSocketServer, type WebSocket } from "ws";
+import type { Event } from "@stark-ai/contracts";
 import { handleToolsCall, handleToolsList } from "../src/server.js";
 import { Registry } from "../src/tools/registry.js";
 
-function makeRegistry(): Registry {
+function makeRegistry(options: { includeRenderTool?: boolean } = {}): Registry {
   const registry = new Registry();
   registry.register({
     name: "echo_tool",
@@ -24,7 +26,32 @@ function makeRegistry(): Registry {
       throw new Error("boom");
     },
   });
+  if (options.includeRenderTool) {
+    registry.register({
+      name: "brief_tool",
+      description: "Returns spoken text and a render payload.",
+      parameters: { type: "object", properties: {} },
+      handler: async () => ({
+        spoken: "Tre segnali oggi.",
+        render: { type: "stark.brief", title: "Daily Brief", payload: { summary: "ok" } },
+      }),
+    });
+  }
   return registry;
+}
+
+function waitForRenderEvent(events: Event[]): Promise<Event> {
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error("render.event was not published")), 500);
+    const timer = setInterval(() => {
+      const event = events.find((candidate) => candidate.type === "render.event");
+      if (event) {
+        clearTimeout(deadline);
+        clearInterval(timer);
+        resolve(event);
+      }
+    }, 5);
+  });
 }
 
 describe("GET /tools — unified tool plane", () => {
@@ -44,6 +71,45 @@ describe("POST /tools/call — unified dispatch", () => {
     const result = await handleToolsCall(makeRegistry(), JSON.stringify({ name: "echo_tool", args: { text: "hi" } }));
     expect(result.status).toBe(200);
     expect(result.json).toEqual({ ok: true, data: { echoed: "hi" } });
+  });
+
+  it("publishes RenderResult payloads to the hub and returns spoken text only", async () => {
+    const hub = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+    const events: Event[] = [];
+    const sockets = new Set<WebSocket>();
+    hub.on("connection", (socket) => {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
+      socket.on("message", (data) => events.push(JSON.parse(data.toString()) as Event));
+    });
+    await new Promise<void>((resolve) => hub.once("listening", resolve));
+    const address = hub.address();
+    if (!address || typeof address === "string") throw new Error("fake hub did not expose a port");
+    const previousHubUrl = process.env.STARK_HUB_URL;
+    process.env.STARK_HUB_URL = `ws://127.0.0.1:${address.port}`;
+
+    try {
+      const result = await handleToolsCall(makeRegistry({ includeRenderTool: true }), JSON.stringify({ name: "brief_tool", args: {} }));
+
+      expect(result.status).toBe(200);
+      expect(result.json).toEqual({ ok: true, data: "Tre segnali oggi." });
+      await expect(waitForRenderEvent(events)).resolves.toMatchObject({
+        type: "render.event",
+        tool: "brief_tool",
+        render: "stark.brief",
+        title: "Daily Brief",
+        spoken: "Tre segnali oggi.",
+        payload: { summary: "ok" },
+      });
+    } finally {
+      if (previousHubUrl === undefined) {
+        delete process.env.STARK_HUB_URL;
+      } else {
+        process.env.STARK_HUB_URL = previousHubUrl;
+      }
+      for (const socket of sockets) socket.terminate();
+      await new Promise<void>((resolve, reject) => hub.close((error) => error ? reject(error) : resolve()));
+    }
   });
 
   it("passes through a result that is already a ToolResult", async () => {
