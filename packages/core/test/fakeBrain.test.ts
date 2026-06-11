@@ -1,18 +1,38 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Event } from "@stark-ai/contracts";
 import { FakeBrain } from "../src/brain/fake.js";
+import { loadConfig } from "../src/config.js";
+import { createActivePersonaState } from "../src/personas/active.js";
+import { personaRegistry } from "../src/personas/registry.js";
+
+const cfg = loadConfig({});
+
+function brain(options: ConstructorParameters<typeof FakeBrain>[0] = {}) {
+  return new FakeBrain({
+    tokenDelayMs: 0,
+    activePersonas: createActivePersonaState(personaRegistry),
+    config: cfg,
+    ...options,
+  });
+}
 
 describe("FakeBrain", () => {
   it("emits route info, streamed tokens, done, and echo TTS for stt.final", async () => {
-    const brain = new FakeBrain({ tokenDelayMs: 0 });
+    const fakeBrain = brain();
     const emitted: Event[] = [];
 
-    await brain.handle(
+    await fakeBrain.handle(
       { v: 1, type: "stt.final", text: "ciao JARVIS", lang: "it" },
       (event) => emitted.push(event),
     );
 
-    expect(emitted[0]).toEqual({ v: 1, type: "route.info", provider: "fake", model: "fake-1", reason: "slice1" });
+    expect(emitted[0]).toEqual({
+      v: 1,
+      type: "route.info",
+      provider: "local",
+      model: cfg.modelLocal,
+      reason: "persona prefers local",
+    });
     expect(emitted.filter((event) => event.type === "agent.token").length).toBeGreaterThanOrEqual(5);
     expect(emitted.filter((event) => event.type === "agent.token").length).toBeLessThanOrEqual(10);
     expect(emitted.at(-2)).toEqual({ v: 1, type: "agent.done" });
@@ -25,10 +45,10 @@ describe("FakeBrain", () => {
   });
 
   it("switches persona from an Italian intent without streaming tokens", async () => {
-    const brain = new FakeBrain({ tokenDelayMs: 0 });
+    const fakeBrain = brain();
     const emitted: Event[] = [];
 
-    await brain.handle(
+    await fakeBrain.handle(
       { v: 1, type: "stt.final", text: "passa a friday", lang: "it" },
       (event) => emitted.push(event),
     );
@@ -51,15 +71,15 @@ describe("FakeBrain", () => {
   });
 
   it("switches persona from an English intent and keeps it for normal turns", async () => {
-    const brain = new FakeBrain({ tokenDelayMs: 0 });
+    const fakeBrain = brain();
     const switchEvents: Event[] = [];
     const normalEvents: Event[] = [];
 
-    await brain.handle(
+    await fakeBrain.handle(
       { v: 1, type: "stt.final", text: "switch to JARVIS", lang: "en" },
       (event) => switchEvents.push(event),
     );
-    await brain.handle(
+    await fakeBrain.handle(
       { v: 1, type: "stt.final", text: "status", lang: "en" },
       (event) => normalEvents.push(event),
     );
@@ -88,15 +108,21 @@ describe("FakeBrain", () => {
   });
 
   it("treats unknown persona switch phrases as normal echo turns", async () => {
-    const brain = new FakeBrain({ tokenDelayMs: 0 });
+    const fakeBrain = brain();
     const emitted: Event[] = [];
 
-    await brain.handle(
+    await fakeBrain.handle(
       { v: 1, type: "stt.final", text: "passa a veronica", lang: "it" },
       (event) => emitted.push(event),
     );
 
-    expect(emitted[0]).toEqual({ v: 1, type: "route.info", provider: "fake", model: "fake-1", reason: "slice1" });
+    expect(emitted[0]).toEqual({
+      v: 1,
+      type: "route.info",
+      provider: "local",
+      model: cfg.modelLocal,
+      reason: "persona prefers local",
+    });
     expect(emitted.some((event) => event.type === "agent.token")).toBe(true);
     expect(emitted.at(-1)).toEqual({
       v: 1,
@@ -108,21 +134,77 @@ describe("FakeBrain", () => {
 
   it("cancels in-flight streaming and emits tts.cancel on barge_in", async () => {
     vi.useFakeTimers();
-    const brain = new FakeBrain({ tokenDelayMs: 50 });
+    const fakeBrain = brain({ tokenDelayMs: 50 });
     const emitted: Event[] = [];
 
-    const streaming = brain.handle(
+    const streaming = fakeBrain.handle(
       { v: 1, type: "stt.final", text: "test cancellazione", lang: "it" },
       (event) => emitted.push(event),
     );
 
     await vi.advanceTimersByTimeAsync(60);
-    await brain.handle({ v: 1, type: "barge_in" }, (event) => emitted.push(event));
+    await fakeBrain.handle({ v: 1, type: "barge_in" }, (event) => emitted.push(event));
     await vi.runAllTimersAsync();
     await streaming;
     vi.useRealTimers();
 
     expect(emitted).toContainEqual({ v: 1, type: "tts.cancel" });
     expect(emitted.some((event) => event.type === "tts.speak")).toBe(false);
+  });
+
+  it("uses active FRIDAY hints to bias a normal online turn to API", async () => {
+    const fakeBrain = brain({ online: true });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle({ v: 1, type: "stt.final", text: "passa a friday", lang: "it" }, () => undefined);
+    await fakeBrain.handle(
+      { v: 1, type: "stt.final", text: "valuta questa idea", lang: "it" },
+      (event) => emitted.push(event),
+    );
+
+    expect(emitted[0]).toMatchObject({
+      v: 1,
+      type: "route.info",
+      provider: "api",
+      model: cfg.modelApi,
+    });
+    expect(emitted[0]).toMatchObject({ reason: expect.stringMatching(/persona/i) });
+  });
+
+  it("keeps active JARVIS normal turns local when online", async () => {
+    const fakeBrain = brain({ online: true });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle(
+      { v: 1, type: "stt.final", text: "status", lang: "it" },
+      (event) => emitted.push(event),
+    );
+
+    expect(emitted[0]).toEqual({
+      v: 1,
+      type: "route.info",
+      provider: "local",
+      model: cfg.modelLocal,
+      reason: "persona prefers local",
+    });
+  });
+
+  it("hard offline rule beats active FRIDAY cloud preference", async () => {
+    const fakeBrain = brain({ online: false });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle({ v: 1, type: "stt.final", text: "passa a friday", lang: "it" }, () => undefined);
+    await fakeBrain.handle(
+      { v: 1, type: "stt.final", text: "valuta questa idea", lang: "it" },
+      (event) => emitted.push(event),
+    );
+
+    expect(emitted[0]).toEqual({
+      v: 1,
+      type: "route.info",
+      provider: "local",
+      model: cfg.modelLocal,
+      reason: "offline",
+    });
   });
 });

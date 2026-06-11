@@ -1,4 +1,6 @@
 import type { Event } from "@stark-ai/contracts";
+import { loadConfig, type Config } from "../config.js";
+import { decide } from "../core/router.js";
 import { activePersona, type ActivePersonaState } from "../personas/active.js";
 import { personaRegistry, type PersonaId, type PersonaRegistry } from "../personas/registry.js";
 
@@ -11,6 +13,8 @@ export type FakeBrainOptions = {
   tokenDelayMs?: number;
   personas?: PersonaRegistry;
   activePersonas?: ActivePersonaState;
+  config?: Config;
+  online?: boolean;
 };
 
 const defaultTokens = ["Ho ", "ricevuto ", "il ", "tuo ", "messaggio", "."];
@@ -23,12 +27,16 @@ export class FakeBrain {
   private readonly tokenDelayMs: number;
   private readonly personas: PersonaRegistry;
   private readonly activePersonas: ActivePersonaState;
+  private readonly cfg: Config;
+  private readonly online: boolean;
   private streamId = 0;
 
   constructor(options: FakeBrainOptions = {}) {
     this.tokenDelayMs = options.tokenDelayMs ?? 50;
     this.personas = options.personas ?? personaRegistry;
     this.activePersonas = options.activePersonas ?? activePersona;
+    this.cfg = options.config ?? loadConfig({});
+    this.online = options.online ?? true;
   }
 
   async handle(event: BrainInput, emit: BrainEmitter): Promise<void> {
@@ -61,7 +69,18 @@ export class FakeBrain {
     const streamId = this.streamId + 1;
     this.streamId = streamId;
 
-    emit({ v: 1, type: "route.info", provider: "fake", model: "fake-1", reason: "slice1" });
+    const active = this.personas.get(this.activePersonas.current());
+    const route = decide(
+      event.text,
+      {
+        online: this.optsOnline(),
+        sensitive: false,
+        personaHints: active.routingHints,
+      },
+      this.cfg,
+    );
+
+    emit({ v: 1, type: "route.info", provider: route.target, model: route.model, reason: route.reason });
 
     for (const delta of defaultTokens) {
       await delay(this.tokenDelayMs);
@@ -82,5 +101,9 @@ export class FakeBrain {
     const target = match[1];
     if (!target || !this.personas.has(target)) return null;
     return target;
+  }
+
+  private optsOnline(): boolean {
+    return this.online;
   }
 }
