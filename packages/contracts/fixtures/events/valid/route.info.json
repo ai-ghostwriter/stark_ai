@@ -1,0 +1,1 @@
+{ "v": 1, "type": "route.info", "provider": "ollama", "model": "qwen2.5:7b", "reason": "offline" }
