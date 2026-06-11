@@ -17,9 +17,12 @@ cleanup() {
   echo "Arresto servizi STARK-AI..."
   for pid in "$CORE_PID" "$HUB_PID" "$TOKEN_PID" "$AGENT_PID" "$UI_PID"; do
     if [[ -n "$pid" ]]; then
+      pkill -P "$pid" 2>/dev/null || true
       kill "$pid" 2>/dev/null || true
     fi
   done
+  # LiveKit agents spawn job subprocesses that outlive their parent: reap them.
+  pkill -f "multiprocessing.spawn" 2>/dev/null || true
   docker compose -f "$ROOT/docker/docker-compose.yml" down
 }
 
@@ -76,7 +79,7 @@ TOKEN_PID=$!
 echo "Avvio Voice Agent..."
 (
   cd "$ROOT/packages/voice"
-  "$PYTHON" agent.py dev
+  "$PYTHON" agent.py start
 ) &
 AGENT_PID=$!
 

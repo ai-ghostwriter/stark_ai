@@ -22,6 +22,8 @@ dev-offline: ## start offline hub and fake voice stub; hub loads MCP servers fro
 	  "packages/voice/.venv/bin/python packages/voice/fake_voice.py"
 
 dev-voice: ## start offline hub and real offline voice client; hub loads MCP servers from tools/mcp.config.json
+	@curl -sf -m 2 http://localhost:8880/v1/models >/dev/null 2>&1 || \
+	  echo "⚠️  Kokoro TTS non raggiungibile su :8880 — le risposte saranno MUTE. Avvialo con: docker compose -f docker/docker-compose.yml up -d"
 	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \
 	  "cd packages/core && npm run dev:hub" \
 	  "cd packages/voice && ./.venv/bin/python -m offline_voice"

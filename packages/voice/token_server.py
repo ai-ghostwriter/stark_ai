@@ -30,7 +30,7 @@ _current_mode: str = "gemini"
 _current_persona: str = "friday"
 
 VALID_MODES = {"gemini", "ollama", "claude", "gpt"}
-VALID_PERSONAS = {"jarvis", "friday"}
+VALID_PERSONAS = {"jarvis", "friday", "veronica", "warmachine"}
 
 
 class ModePayload(BaseModel):
@@ -62,7 +62,7 @@ async def dispatch_agent_to_room(
     )
     try:
         await livekit_api.agent_dispatch.create_dispatch(
-            api.CreateAgentDispatchRequest(room=room_name, agent_name="")
+            api.CreateAgentDispatchRequest(room=room_name, agent_name="stark")
         )
     finally:
         await livekit_api.aclose()
