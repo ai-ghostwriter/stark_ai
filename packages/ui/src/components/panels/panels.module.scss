@@ -1,0 +1,106 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  height: 100%;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+.fallback {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.summary {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text-bright);
+  text-shadow: var(--glow-cyan);
+  min-height: 3em;
+  margin: 0;
+}
+
+.cursor { animation: blink 0.7s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+
+.chip {
+  border: 1px solid var(--color-border);
+  border-radius: var(--panel-radius);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 11px;
+  opacity: 0;
+  display: inline-flex;
+  gap: var(--space-sm);
+}
+
+.chipIn { animation: fadeUp 0.4s ease forwards; }
+.chipLabel { color: var(--color-text-dim); }
+.chipValue { color: var(--color-bright); }
+
+.sections { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
+.lineHidden { opacity: 0; }
+.lineIn { opacity: 0; animation: fadeUp 0.45s ease forwards; font-size: 13px; line-height: 1.45; }
+.sectionTitle { color: var(--color-cyan); text-transform: uppercase; margin-right: var(--space-sm); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* — metrics — */
+.metricName { font-size: 12px; color: var(--color-text-dim); text-transform: uppercase; }
+.chartSvg { width: 100%; height: auto; }
+.chartLine {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(0, 212, 245, 0.8));
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.6s ease forwards;
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+/* Asse date come layer HTML separato: le label restano nitide quando il grafico si stira. */
+.axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--color-text-dim); }
+
+/* — pipeline — */
+.stageRow { display: grid; grid-template-columns: 110px 1fr 36px; align-items: center; gap: var(--space-sm); font-size: 12px; }
+.stageBarTrack { background: rgba(0, 212, 245, 0.08); height: 14px; border-radius: var(--panel-radius); overflow: hidden; }
+.stageBar {
+  height: 100%;
+  background: var(--color-cyan-dim);
+  box-shadow: var(--glow-cyan);
+  transform-origin: left;
+  animation: growBar 0.7s ease forwards;
+}
+@keyframes growBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.dealRow { display: flex; justify-content: space-between; gap: var(--space-sm); font-size: 12px; padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border); }
+.dealAtRisk { color: #ff5d5d; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.45; } }
+
+/* — intel — */
+.timeline { list-style: none; margin: 0; padding: 0 0 0 var(--space-lg); border-left: 1px solid var(--color-border-bright); display: flex; flex-direction: column; gap: var(--space-md); }
+.timelineItem { position: relative; opacity: 0; animation: fadeUp 0.45s ease forwards; font-size: 13px; line-height: 1.45; }
+.timelineItem::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-lg) - 4px);
+  top: 5px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--color-cyan);
+  box-shadow: var(--glow-cyan);
+}
+.timelineMeta { color: var(--color-text-dim); font-size: 11px; }
+
+/* — actions — */
+.focus { font-size: 14px; color: var(--color-text-bright); text-shadow: var(--glow-cyan); margin: 0; }
+.actionRow { display: grid; grid-template-columns: 28px 1fr; gap: var(--space-sm); opacity: 0; animation: fadeUp 0.45s ease forwards; font-size: 13px; }
+.actionRank { color: var(--color-cyan); text-shadow: var(--glow-cyan); }
+.actionWhy { color: var(--color-text-dim); font-size: 11px; }

@@ -4,6 +4,7 @@ import { HudPanel } from "../HudPanel/HudPanel";
 import { AgentStatus } from "../AgentStatus/AgentStatus";
 import { ConnectionStatus } from "../ConnectionStatus/ConnectionStatus";
 import { EventLog } from "../EventLog/EventLog";
+import { HudStage } from "../HudStage/HudStage";
 import { SystemInfo } from "../SystemInfo/SystemInfo";
 import { TranscriptPanel } from "../TranscriptPanel/TranscriptPanel";
 import { VoicePanel } from "../VoicePanel/VoicePanel";
@@ -39,7 +40,7 @@ export function AppShell({ onReconnect }: AppShellProps) {
       </aside>
       <main className={styles.center}>
         <HudPanel glowIntensity="strong" className={styles.voicePanel}>
-          <VoicePanel />
+          <HudStage idle={<VoicePanel />} />
         </HudPanel>
       </main>
       <aside className={styles.right}>

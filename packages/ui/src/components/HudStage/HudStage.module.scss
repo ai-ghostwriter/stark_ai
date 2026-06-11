@@ -1,0 +1,45 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--font-mono);
+  animation: stageIn 0.35s ease;
+}
+
+@keyframes stageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-bright);
+  margin-bottom: var(--space-md);
+}
+
+.stageTitle {
+  color: var(--color-bright);
+  text-shadow: var(--glow-cyan);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 14px;
+}
+
+.stageClose {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+
+  &:hover { color: var(--color-bright); border-color: var(--color-border-bright); }
+}
+
+.stageBody { flex: 1; min-height: 0; overflow-y: auto; }
+
+.fallback { font-size: 11px; color: var(--color-text-dim); white-space: pre-wrap; }

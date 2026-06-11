@@ -45,6 +45,12 @@ function appendTranscript(lines: TranscriptLine[], event: HubEvent): TranscriptL
     return [...lines, { id: Date.now() + lines.length, type: "route", text: `${provider} · ${model} · ${reason}` }];
   }
 
+  if (event.type === "render.event") {
+    const title = textValue((event as { title?: unknown }).title);
+    const render = textValue((event as { render?: unknown }).render);
+    return [...lines, { id: Date.now() + lines.length, type: "route", text: `render · ${render} · ${title}` }];
+  }
+
   if (event.type === "agent.token") {
     const delta = textValue(event.delta);
     const previous = lines[lines.length - 1];
