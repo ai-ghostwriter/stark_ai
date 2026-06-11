@@ -11,6 +11,8 @@ const TASK_TIER: Record<TaskType, ApiTier> = {
   copy: "sonnet",
   manuscript: "opus",
   strategy: "opus",
+  critical: "sonnet",
+  creative: "sonnet",
 };
 
 export interface TierPick {
