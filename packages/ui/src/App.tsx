@@ -7,6 +7,7 @@ import {
 import { ConnectionState } from "livekit-client";
 import { AppShell } from "./components/AppShell/AppShell";
 import { BootScreen } from "./components/BootScreen/BootScreen";
+import { OfflineDebugView } from "./components/OfflineDebugView/OfflineDebugView";
 import styles from "./App.module.scss";
 
 type TokenPayload = {
@@ -35,6 +36,7 @@ async function requestToken(): Promise<TokenPayload> {
 }
 
 export default function App() {
+  const [view, setView] = useState<"livekit" | "offline">("livekit");
   const [tokenState, setTokenState] = useState<TokenState>({
     status: "loading",
     token: null,
@@ -66,34 +68,64 @@ export default function App() {
     loadToken();
   }, [loadToken]);
 
+  const modeToggle = (
+    <button
+      type="button"
+      className={styles.offlineToggle}
+      onClick={() => setView((current) => (current === "offline" ? "livekit" : "offline"))}
+    >
+      {view === "offline" ? "LiveKit View" : "Offline Debug"}
+    </button>
+  );
+
+  if (view === "offline") {
+    return (
+      <>
+        {modeToggle}
+        <OfflineDebugView />
+      </>
+    );
+  }
+
   if (tokenState.status === "loading") {
-    return <BootScreen lines={["TOKEN HANDSHAKE", "LIVEKIT UPLINK", "FRIDAY BRIDGE"]} />;
+    return (
+      <>
+        {modeToggle}
+        <BootScreen lines={["TOKEN HANDSHAKE", "LIVEKIT UPLINK", "FRIDAY BRIDGE"]} />
+      </>
+    );
   }
 
   if (tokenState.status === "error") {
     return (
-      <div className={styles.errorScreen}>
-        <div className={styles.errorCard}>
-          <div className={styles.errorTitle}>CONNESSIONE NON DISPONIBILE</div>
-          <p>{tokenState.error}</p>
-          <button type="button" onClick={loadToken}>RIPROVA</button>
+      <>
+        {modeToggle}
+        <div className={styles.errorScreen}>
+          <div className={styles.errorCard}>
+            <div className={styles.errorTitle}>CONNESSIONE NON DISPONIBILE</div>
+            <p>{tokenState.error}</p>
+            <button type="button" onClick={loadToken}>RIPROVA</button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <LiveKitRoom
-      serverUrl={tokenState.serverUrl}
-      token={tokenState.token}
-      connect
-      audio
-      video={false}
-      className={styles.room}
-    >
-      <FridayApp onReconnect={loadToken} />
-      <RoomAudioRenderer />
-    </LiveKitRoom>
+    <>
+      {modeToggle}
+      <LiveKitRoom
+        serverUrl={tokenState.serverUrl}
+        token={tokenState.token}
+        connect
+        audio
+        video={false}
+        className={styles.room}
+      >
+        <FridayApp onReconnect={loadToken} />
+        <RoomAudioRenderer />
+      </LiveKitRoom>
+    </>
   );
 }
 

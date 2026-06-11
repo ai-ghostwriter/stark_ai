@@ -1,7 +1,12 @@
 VOICE_BIN := packages/voice/.venv/bin
 CODEGEN_HEADER := \# GENERATED from @stark-ai/contracts — DO NOT EDIT. Regenerate with 'make codegen'.
 
-.PHONY: codegen test-contracts
+.PHONY: codegen test-contracts dev-offline
+
+dev-offline: ## start offline hub and fake voice stub
+	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \
+	  "cd packages/core && npm run dev:hub" \
+	  "packages/voice/.venv/bin/python packages/voice/fake_voice.py"
 
 codegen: ## Zod → JSON Schema → Pydantic (run after ANY contract change)
 	cd packages/contracts && npm run gen

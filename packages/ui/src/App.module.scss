@@ -3,6 +3,24 @@
   background: transparent;
 }
 
+.offlineToggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  min-width: 144px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-bright);
+  background: rgba(0, 11, 20, 0.88);
+  color: var(--color-bright);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--glow-cyan);
+}
+
 .errorScreen {
   min-height: 100%;
   display: grid;
