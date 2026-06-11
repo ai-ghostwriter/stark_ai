@@ -22,10 +22,20 @@ async function detectOnlineOnce(): Promise<boolean> {
 const online = await detectOnlineOnce();
 const cfg = loadConfig();
 const tools = await createToolRuntime(cfg);
-const hub = createEventHub({ host: "127.0.0.1", port: 7710, brainOptions: { online, tools: tools.registry } });
+const hub = createEventHub({
+  host: "127.0.0.1",
+  port: 7710,
+  brainOptions: {
+    online,
+    cfg,
+    config: cfg,
+    registry: tools.registry,
+    tools: tools.registry,
+  },
+});
 
 await hub.start();
-console.log(`STARK-AI offline event hub listening on ws://127.0.0.1:${hub.port} (online=${online})`);
+console.log(`STARK-AI event hub listening on ws://127.0.0.1:${hub.port} (online=${online}, brain=${process.env.STARK_BRAIN ?? "real"})`);
 
 async function shutdown(): Promise<void> {
   await hub.stop();

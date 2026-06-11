@@ -1,6 +1,7 @@
 import { Event } from "@stark-ai/contracts";
 import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { FakeBrain, type FakeBrainOptions } from "../brain/fake.js";
+import { RealBrain, type RealBrainOptions } from "../brain/real.js";
 
 type Role = "voice" | "hud";
 
@@ -13,8 +14,8 @@ type ClientRecord = {
 export type EventHubOptions = {
   host?: string;
   port?: number;
-  brain?: FakeBrain;
-  brainOptions?: FakeBrainOptions;
+  brain?: Brain;
+  brainOptions?: FakeBrainOptions & RealBrainOptions;
 };
 
 export type EventHub = {
@@ -23,10 +24,36 @@ export type EventHub = {
   stop: () => Promise<void>;
 };
 
+type BrainInput = Extract<Event, { type: "stt.final" | "barge_in" }>;
+type BrainOutput = Extract<Event, {
+  type:
+    | "route.info"
+    | "agent.token"
+    | "agent.done"
+    | "tts.speak"
+    | "tts.cancel"
+    | "tool.call"
+    | "tool.result"
+    | "sys.error";
+}>;
+
+export type Brain = {
+  handle(event: BrainInput, emit: (event: BrainOutput) => void): Promise<void>;
+};
+
+function selectBrain(options: EventHubOptions): Brain {
+  if (options.brain) return options.brain;
+  const requested = (process.env.STARK_BRAIN ?? (process.env.NODE_ENV === "test" ? "fake" : "real")).toLowerCase();
+  if (requested === "fake") return new FakeBrain(options.brainOptions);
+  if (requested === "real") return new RealBrain(options.brainOptions);
+  console.warn(`[hub] unknown STARK_BRAIN='${requested}', falling back to real`);
+  return new RealBrain(options.brainOptions);
+}
+
 export function createEventHub(options: EventHubOptions = {}): EventHub {
   const host = options.host ?? "127.0.0.1";
   const requestedPort = options.port ?? 7710;
-  const brain = options.brain ?? new FakeBrain(options.brainOptions);
+  const brain = selectBrain(options);
   const clients = new Map<WebSocket, ClientRecord>();
   let server: WebSocketServer | null = null;
   let activePort = requestedPort;
