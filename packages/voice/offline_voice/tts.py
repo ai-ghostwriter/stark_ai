@@ -8,9 +8,9 @@ from typing import Any
 KOKORO_DEFAULT_URL = "http://localhost:8880"
 KOKORO_MODEL = "kokoro"
 PERSONA_VOICES = {
-    "jarvis": {"kokoro": "am_adam"},
-    "friday": {"kokoro": "af_sky"},
-    "default": {"kokoro": "am_adam"},
+    "jarvis": {"kokoro": "am_adam", "edgetts": "en-US-GuyNeural"},
+    "friday": {"kokoro": "af_sky", "edgetts": "en-IE-EmilyNeural"},
+    "default": {"kokoro": "am_adam", "edgetts": "en-US-GuyNeural"},
 }
 DEFAULT_KOKORO_VOICE = PERSONA_VOICES["default"]["kokoro"]
 
@@ -70,4 +70,3 @@ class KokoroTTS:
         selected_voice = resolve_voice(explicit_voice=voice, persona=persona, warn=self.warn)
         wav_bytes = await self.synthesize(text, voice=selected_voice)
         await player.play_wav_bytes(wav_bytes)
-
