@@ -25,6 +25,7 @@ from livekit.plugins import google, openai
 from personas import detect_persona, get_persona
 from tts_kokoro import make_tts
 from tools import get_weather, search_web, send_email
+from core_tools import load_core_tools
 from hub_bridge import DEFAULT_HUB_URL, ask_core
 
 load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
@@ -177,8 +178,26 @@ class StarkAssistant(Agent):
 
 # -- Session factories --------------------------------------------------------
 
+LEGACY_TOOLS = [get_weather, search_web, send_email]
+
+
+async def resolve_session_tools() -> list:
+    """Unified tool plane: every mode gets the core registry tools.
+
+    Falls back to the legacy in-process trio only when the core is down.
+    """
+    core_url = os.getenv("JARVIS_URL", DEFAULT_JARVIS_URL)
+    tools = await load_core_tools(core_url)
+    if tools:
+        logger.info("Loaded %d tools from the core registry at %s", len(tools), core_url)
+        return tools
+    logger.warning("Core tool plane unavailable — falling back to %d legacy tools", len(LEGACY_TOOLS))
+    return LEGACY_TOOLS
+
+
 async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> None:
     persona_mod = get_persona(persona_state.get("persona", "friday"))
+    session_tools = await resolve_session_tools()
     session = AgentSession()
     await session.start(
         room=ctx.room,
@@ -188,7 +207,7 @@ async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> N
                 voice="Fenrir" if persona_state.get("persona") == "jarvis" else "Aoede",
                 temperature=0.8,
             ),
-            tools=[get_weather, search_web, send_email],
+            tools=session_tools,
         ),
         room_input_options=RoomInputOptions(),
     )
@@ -215,9 +234,10 @@ async def start_pipeline_session(
 
     persona_mod = get_persona(persona_state.get("persona", "friday"))
 
+    session_tools = await resolve_session_tools()
     await session.start(
         room=ctx.room,
-        agent=StarkAssistant(persona_state, tools=[get_weather, search_web, send_email]),
+        agent=StarkAssistant(persona_state, tools=session_tools),
         room_input_options=RoomInputOptions(),
     )
     await session.generate_reply(instructions=persona_mod.SESSION_INSTRUCTION)
