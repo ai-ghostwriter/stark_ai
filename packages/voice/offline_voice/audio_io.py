@@ -50,6 +50,17 @@ class Microphone:
     def __init__(self, *, sample_rate: int = SAMPLE_RATE, frame_bytes: int = FRAME_BYTES) -> None:
         self.sample_rate = sample_rate
         self.frame_bytes = frame_bytes
+        self.device_name = "microfono predefinito"
+
+    def _load_device_name(self) -> None:
+        import sounddevice as sd
+
+        try:
+            device = sd.query_devices(kind="input")
+        except Exception:
+            return
+        if isinstance(device, dict) and device.get("name"):
+            self.device_name = str(device["name"])
 
     def frames(self) -> Iterator[bytes]:
         import sounddevice as sd
@@ -62,6 +73,7 @@ class Microphone:
                 return
             audio_queue.put(bytes(indata))
 
+        self._load_device_name()
         with sd.RawInputStream(
             samplerate=self.sample_rate,
             channels=1,

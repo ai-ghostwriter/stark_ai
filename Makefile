@@ -22,8 +22,29 @@ dev-offline: ## start offline hub and fake voice stub; hub loads MCP servers fro
 	  "packages/voice/.venv/bin/python packages/voice/fake_voice.py"
 
 dev-voice: ## start offline hub and real offline voice client; hub loads MCP servers from tools/mcp.config.json
-	@curl -sf -m 2 http://localhost:8880/v1/models >/dev/null 2>&1 || \
-	  echo "⚠️  Kokoro TTS non raggiungibile su :8880 — le risposte saranno MUTE. Avvialo con: docker compose -f docker/docker-compose.yml up -d"
+	@if curl -sf -m 2 http://localhost:8880/v1/models >/dev/null 2>&1; then \
+	  echo "✅ Kokoro TTS pronto su :8880"; \
+	elif docker info >/dev/null 2>&1; then \
+	  echo "▶️  Kokoro TTS non risponde: avvio docker compose service 'kokoro'..."; \
+	  if docker compose -f docker/docker-compose.yml up -d kokoro; then \
+	    i=0; \
+	    while [ $$i -lt 30 ]; do \
+	      if curl -sf -m 2 http://localhost:8880/v1/models >/dev/null 2>&1; then \
+	        echo "✅ Kokoro TTS pronto su :8880"; \
+	        break; \
+	      fi; \
+	      i=$$((i + 1)); \
+	      sleep 1; \
+	    done; \
+	    if [ $$i -ge 30 ]; then \
+	      echo "⚠️  Kokoro TTS si sta ancora scaldando: la voce partirà appena :8880 sarà pronto."; \
+	    fi; \
+	  else \
+	    echo "⚠️  Docker Compose non è riuscito ad avviare Kokoro: le risposte saranno MUTE."; \
+	  fi; \
+	else \
+	  echo "⚠️  Docker non disponibile e Kokoro TTS non raggiungibile su :8880: le risposte saranno MUTE."; \
+	fi
 	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \
 	  "cd packages/core && npm run dev:hub" \
 	  "cd packages/voice && ./.venv/bin/python -m offline_voice"

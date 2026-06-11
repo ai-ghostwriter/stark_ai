@@ -31,18 +31,33 @@ class FasterWhisperSTT:
     download or initialize ML assets unless STT is actually used.
     """
 
-    def __init__(self, model_size: str | None = None, *, device: str | None = None, compute_type: str | None = None) -> None:
+    def __init__(
+        self,
+        model_size: str | None = None,
+        *,
+        device: str | None = None,
+        compute_type: str | None = None,
+        reporter: Callable[[str], None] | None = None,
+    ) -> None:
         self.model_size = model_size or os.getenv("WHISPER_MODEL", DEFAULT_MODEL_SIZE)
         self.device = device or os.getenv("WHISPER_DEVICE", "auto")
         self.compute_type = compute_type or os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+        self.reporter = reporter
         self._model = None
 
     @property
     def model(self):
         if self._model is None:
+            if self.reporter is not None:
+                self.reporter(
+                    f"Whisper {self.model_size} in caricamento lazy "
+                    f"(device={self.device}, compute={self.compute_type})..."
+                )
             from faster_whisper import WhisperModel
 
             self._model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type)
+            if self.reporter is not None:
+                self.reporter(f"Whisper {self.model_size} pronto")
         return self._model
 
     def transcribe_pcm16(
@@ -79,4 +94,3 @@ class FasterWhisperSTT:
 
 def pcm16_bytes_to_float32(pcm: bytes) -> np.ndarray:
     return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
-

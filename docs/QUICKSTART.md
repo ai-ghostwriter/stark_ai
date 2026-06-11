@@ -10,13 +10,10 @@ hub on `ws://127.0.0.1:7710`) and the **same tool plane** (the core registry:
 # 1. Ollama with the local model
 ollama pull qwen3:8b
 
-# 2. Kokoro TTS container (port 8880)
-docker compose -f docker/docker-compose.yml up -d
-
-# 3. Optional but recommended: API keys
+# 2. Optional but recommended: API keys
 cp .env.example .env   # then fill ANTHROPIC_API_KEY, LiveKit keys, etc.
 
-# 4. Only if the mcp-screen venv is missing
+# 3. Only if the mcp-screen venv is missing
 make setup-mcp-screen
 ```
 
@@ -27,7 +24,8 @@ make dev-voice
 ```
 
 Starts the hub (real brain, all MCP tools) + the offline voice client.
-Talk into the microphone; the reply comes back through Kokoro.
+`make dev-voice` starts Kokoro TTS automatically through Docker when port 8880
+is not already ready. Talk into the microphone; the reply comes back through Kokoro.
 
 Things to try by voice:
 - `"passa a friday"` / `"switch to jarvis"` / `"passa a veronica"` / `"passa a war machine"` — persona switch with voice change
@@ -86,6 +84,6 @@ curl -X POST http://localhost:8787/tools/call \
 |---|---|
 | Port 7710 busy | `pkill -f "bus/index"` and relaunch |
 | Ollama down | Router falls back to the Anthropic API if `ANTHROPIC_API_KEY` is set; otherwise a polite error reply |
-| Kokoro down | Playback warning, no crash — start the container |
+| Kokoro down | `make dev-voice` tries to start the Kokoro container; if Docker is unavailable, replies stay silent |
 | `mcp-screen` fallback warning | `make setup-mcp-screen` |
 | Online modes show only 3 tools | The core (:8787) is not running — check `npm run serve` / `./start.sh` |
