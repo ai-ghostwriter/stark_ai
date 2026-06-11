@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOCAL_VENV="$ROOT/packages/voice/.venv"
 
 CORE_PID=""
+HUB_PID=""
 TOKEN_PID=""
 AGENT_PID=""
 UI_PID=""
@@ -14,7 +15,7 @@ UI_PID=""
 cleanup() {
   echo ""
   echo "Arresto servizi STARK-AI..."
-  for pid in "$CORE_PID" "$TOKEN_PID" "$AGENT_PID" "$UI_PID"; do
+  for pid in "$CORE_PID" "$HUB_PID" "$TOKEN_PID" "$AGENT_PID" "$UI_PID"; do
     if [[ -n "$pid" ]]; then
       kill "$pid" 2>/dev/null || true
     fi
@@ -58,6 +59,13 @@ echo "Avvio Core Node (porta 8787)..."
 ) &
 CORE_PID=$!
 
+echo "Avvio Event Hub WS (porta 7710, brain=real)..."
+(
+  cd "$ROOT/packages/core"
+  STARK_BRAIN="${STARK_BRAIN:-real}" npm run dev:hub
+) &
+HUB_PID=$!
+
 echo "Avvio Token Server (porta 8788)..."
 (
   cd "$ROOT/packages/voice"
@@ -84,6 +92,7 @@ echo "STARK-AI online"
 echo "  UI:           http://localhost:5173"
 echo "  Token server: http://localhost:8788"
 echo "  Core Node:    http://localhost:8787"
+echo "  Event Hub WS: ws://127.0.0.1:7710"
 echo "  Kokoro TTS:   http://localhost:8880"
 echo "  LiveKit:      wss://jarvis-owcf3g35.livekit.cloud (cloud)"
 echo ""
