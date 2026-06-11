@@ -69,6 +69,24 @@ Open `http://localhost:5173` — persona and mode selectors in the header:
 - **OLLAMA / CLAUDE**: the agent bridges to the event hub (same brain as the
   offline mode); HTTP `/ask` remains as fallback.
 
+### Pannelli HUD (render events)
+
+Ogni risposta dei 5 tool dati viaggia su due binari dalla stessa tool call: la voce
+dice il sommario, il centro della HUD anima il pannello (`render.event` sul bus :7710,
+contratto in `packages/contracts/src/render.ts`).
+
+| Chiedi... | Tool | Pannello |
+|---|---|---|
+| "fammi il brief" | `get_daily_brief` | Brief card (type-in + chips) |
+| "come vanno le vendite / KENP / recensioni" | `query_metrics` | Line chart che si disegna |
+| "cosa c'è in pipeline / a rischio" | `get_pipeline` | Funnel + progetti a rischio in rosso |
+| "cosa è stato detto su X" | `search_intel` | Timeline note |
+| "su cosa lavoro oggi" | `plan_my_day` | Action list prioritizzata |
+
+`STARK_DEMO_MODE=1` (default da `./start.sh`): dati da `seed/*.json`, fittizi e stabili.
+`STARK_DEMO_MODE=0`: sorgenti live quando esisteranno gli adapter; oggi ricade sul seed,
+il pannello non è mai vuoto. Script demo: `seed/DEMO_RUNBOOK.md`.
+
 ## The tool plane over HTTP
 
 ```bash

@@ -41,6 +41,7 @@ export JARVIS_MODEL_LOCAL="${JARVIS_MODEL_LOCAL:-${OLLAMA_MODEL:-qwen3:8b}}"
 export JARVIS_URL="${JARVIS_URL:-http://localhost:8787}"
 export KOKORO_URL="${KOKORO_URL:-http://localhost:8880/v1}"
 export TOKEN_SERVER_URL="${TOKEN_SERVER_URL:-http://localhost:8788}"
+export STARK_DEMO_MODE="${STARK_DEMO_MODE:-1}"
 
 if [[ ! -x "$LOCAL_VENV/bin/python" ]]; then
   echo "Creo venv per packages/voice..."
