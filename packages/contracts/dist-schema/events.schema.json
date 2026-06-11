@@ -1,0 +1,345 @@
+{
+  "$ref": "#/definitions/Event",
+  "definitions": {
+    "Hello": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "number",
+          "const": 1
+        },
+        "type": {
+          "type": "string",
+          "const": "hello"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "voice",
+            "hud"
+          ]
+        },
+        "client": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "role",
+        "client"
+      ],
+      "additionalProperties": false
+    },
+    "SttPartial": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "stt.partial"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "SttFinal": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "stt.final"
+        },
+        "text": {
+          "type": "string"
+        },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "it",
+            "en",
+            "de",
+            "fr"
+          ],
+          "default": "auto"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "BargeIn": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "barge_in"
+        }
+      },
+      "required": [
+        "v",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "TtsSpeak": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "tts.speak"
+        },
+        "text": {
+          "type": "string"
+        },
+        "voice": {
+          "type": "string"
+        },
+        "persona": {
+          "type": "string",
+          "enum": [
+            "jarvis",
+            "friday",
+            "veronica",
+            "default"
+          ],
+          "default": "default"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "TtsCancel": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "tts.cancel"
+        }
+      },
+      "required": [
+        "v",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "AgentToken": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "agent.token"
+        },
+        "delta": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "delta"
+      ],
+      "additionalProperties": false
+    },
+    "AgentDone": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "agent.done"
+        }
+      },
+      "required": [
+        "v",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "RouteInfo": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "route.info"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "provider",
+        "model",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ToolCall": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "tool.call"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "name",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    "ToolResult": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "tool.result"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "data": {}
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "ok"
+      ],
+      "additionalProperties": false
+    },
+    "SysError": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "sys.error"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "scope",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "Event": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Hello"
+        },
+        {
+          "$ref": "#/definitions/SttPartial"
+        },
+        {
+          "$ref": "#/definitions/SttFinal"
+        },
+        {
+          "$ref": "#/definitions/BargeIn"
+        },
+        {
+          "$ref": "#/definitions/TtsSpeak"
+        },
+        {
+          "$ref": "#/definitions/TtsCancel"
+        },
+        {
+          "$ref": "#/definitions/AgentToken"
+        },
+        {
+          "$ref": "#/definitions/AgentDone"
+        },
+        {
+          "$ref": "#/definitions/RouteInfo"
+        },
+        {
+          "$ref": "#/definitions/ToolCall"
+        },
+        {
+          "$ref": "#/definitions/ToolResult"
+        },
+        {
+          "$ref": "#/definitions/SysError"
+        }
+      ]
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

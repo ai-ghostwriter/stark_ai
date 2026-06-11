@@ -1,0 +1,81 @@
+{
+  "$ref": "#/definitions/PersonaProfile",
+  "definitions": {
+    "RoutingHints": {
+      "type": "object",
+      "properties": {
+        "preferred": {
+          "type": "string",
+          "enum": [
+            "local",
+            "cloud"
+          ]
+        },
+        "escalateOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "preferred"
+      ],
+      "additionalProperties": false
+    },
+    "PersonaProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "jarvis",
+            "friday",
+            "veronica",
+            "default"
+          ]
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "voice": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "agentInstruction": {
+          "type": "string"
+        },
+        "sessionInstruction": {
+          "type": "string"
+        },
+        "routingHints": {
+          "$ref": "#/definitions/RoutingHints"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "it",
+            "en",
+            "de",
+            "fr"
+          ],
+          "default": "auto"
+        }
+      },
+      "required": [
+        "id",
+        "displayName",
+        "voice",
+        "agentInstruction",
+        "sessionInstruction",
+        "routingHints"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
