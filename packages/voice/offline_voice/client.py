@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
+import os
 import sys
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -16,15 +18,17 @@ from contracts_gen.events import AgentDone, AgentToken, RouteInfo, SysError, Tts
 from .audio_io import Microphone, Speaker, iter_frames, read_wav_mono_pcm16
 from .fsm import ConversationFSM, State
 from .reporter import StatusReporter, coerce_reporter
-from .stt import FasterWhisperSTT
+from .stt import FasterWhisperSTT, should_emit_transcript
 from .tts import KOKORO_DEFAULT_URL, KokoroTTS
-from .vad import WebRtcVad
+from .vad import FRAME_MS, SAMPLE_WIDTH_BYTES, WebRtcVad
 
 DEFAULT_URL = "ws://127.0.0.1:7710"
 CLIENT_NAME = "offline-voice@0.1"
 CONNECT_ATTEMPTS = 20
 CONNECT_RETRY_SECONDS = 0.2
 KOKORO_CHECK_TIMEOUT = 2.0
+DEFAULT_BARGE_MS = 400
+DEFAULT_REFRACTORY_MS = 300
 
 
 def parse_incoming_message(raw: str) -> Event:
@@ -93,12 +97,72 @@ class OfflineVoiceClient:
         self.stt = FasterWhisperSTT(reporter=self.report)
         self.vad = WebRtcVad()
         self.fsm = ConversationFSM(emit_event=self.emit_event, stop_playback=self.speaker.stop)
+        self._utterance = bytearray()
+        self._barge_speech_frames = 0
+        self._refractory_frames = 0
+        self._barge_frames = self._frames_from_env("OFFLINE_VOICE_BARGE_MS", DEFAULT_BARGE_MS)
+        self._refractory_window_frames = self._frames_from_env(
+            "OFFLINE_VOICE_REFRACTORY_MS",
+            DEFAULT_REFRACTORY_MS,
+        )
 
     def warn(self, message: str) -> None:
         print(f"[warn] {message}", file=sys.stderr, flush=True)
 
     def emit_event(self, event: dict[str, Any]) -> None:
         self.outbox.put_nowait(event)
+
+    @staticmethod
+    def _frames_from_env(name: str, default_ms: int) -> int:
+        return max(1, math.ceil(int(os.getenv(name, str(default_ms))) / FRAME_MS))
+
+    @staticmethod
+    def _segment_duration_seconds(pcm: bytes, sample_rate: int) -> float:
+        return len(pcm) / (sample_rate * SAMPLE_WIDTH_BYTES)
+
+    def _enter_listening(self) -> None:
+        previous_state = self.fsm.state
+        self.fsm.speech_started()
+        if self.fsm.state == State.LISTENING and previous_state != State.LISTENING:
+            self.report("🎤 In ascolto...")
+
+    def _finish_utterance(self, sample_rate: int) -> None:
+        if not self._utterance:
+            return
+
+        pcm = bytes(self._utterance)
+        self._utterance.clear()
+        self.fsm.speech_ended()
+        transcript = self.stt.transcribe_pcm16(
+            pcm,
+            sample_rate=sample_rate,
+            partial_callback=self.fsm.transcript_partial,
+        )
+        decision = should_emit_transcript(
+            transcript.text,
+            duration_seconds=self._segment_duration_seconds(pcm, sample_rate),
+        )
+        if not decision.emit:
+            if decision.reason is not None:
+                self.report(f"(segmento scartato: {decision.reason.value})")
+            self.fsm.transcript_final("", transcript.lang)
+            return
+
+        text = transcript.text.strip()
+        self.report(f"🗣️  {text}")
+        self.fsm.transcript_final(text, transcript.lang)
+
+    def _handle_speaking_frame(self, decision: Any) -> bool:
+        if decision.in_speech:
+            self._barge_speech_frames += 1
+            if self._barge_speech_frames >= self._barge_frames:
+                self._barge_speech_frames = 0
+                self._enter_listening()
+                return False
+            return True
+
+        self._barge_speech_frames = 0
+        return True
 
     async def sender(self) -> None:
         while True:
@@ -125,50 +189,38 @@ class OfflineVoiceClient:
                     self.warn(f"TTS playback failed: {exc}")
                 finally:
                     self.fsm.tts_finished()
+                    self._refractory_frames = self._refractory_window_frames
             elif isinstance(event, TtsCancel):
                 self.fsm.tts_cancelled()
+                self._refractory_frames = self._refractory_window_frames
             elif isinstance(event, (AgentToken, AgentDone, RouteInfo, SysError)):
                 continue
             else:
                 self.warn(f"Dropped unsupported inbound event: {event.type}")
 
-    def _process_frames_sync(self, frames: list[bytes], sample_rate: int) -> None:
-        utterance = bytearray()
+    def _process_frames_sync(self, frames: list[bytes], sample_rate: int, *, flush: bool = False) -> None:
         for frame in frames:
             decision = self.vad.accept_frame(frame)
+            if self.fsm.state == State.SPEAKING and self._handle_speaking_frame(decision):
+                continue
+            if self._refractory_frames > 0:
+                self._refractory_frames -= 1
+                continue
             if decision.speech_started:
-                utterance.clear()
-                self.fsm.speech_started()
-                self.report("🎤 In ascolto...")
-            if decision.in_speech:
-                utterance.extend(frame)
-            if decision.speech_ended and utterance:
-                self.fsm.speech_ended()
-                transcript = self.stt.transcribe_pcm16(
-                    bytes(utterance),
-                    sample_rate=sample_rate,
-                    partial_callback=self.fsm.transcript_partial,
-                )
-                if transcript.text.strip():
-                    self.report(f"🗣️  {transcript.text.strip()}")
-                self.fsm.transcript_final(transcript.text, transcript.lang)
-                utterance.clear()
+                self._utterance.clear()
+                self._enter_listening()
+            if decision.in_speech and self.fsm.state == State.LISTENING:
+                self._utterance.extend(frame)
+            if decision.speech_ended and self.fsm.state == State.LISTENING:
+                self._finish_utterance(sample_rate)
 
-        if utterance and self.fsm.state == State.LISTENING:
-            self.fsm.speech_ended()
-            transcript = self.stt.transcribe_pcm16(
-                bytes(utterance),
-                sample_rate=sample_rate,
-                partial_callback=self.fsm.transcript_partial,
-            )
-            if transcript.text.strip():
-                self.report(f"🗣️  {transcript.text.strip()}")
-            self.fsm.transcript_final(transcript.text, transcript.lang)
+        if flush and self._utterance and self.fsm.state == State.LISTENING:
+            self._finish_utterance(sample_rate)
 
     async def run_wav(self, path: str) -> None:
         self.report(f"Input WAV: {path}")
         pcm, sample_rate = read_wav_mono_pcm16(path)
-        self._process_frames_sync(list(iter_frames(pcm)), sample_rate)
+        self._process_frames_sync(list(iter_frames(pcm)), sample_rate, flush=True)
 
     async def run_microphone(self) -> None:
         mic = self.microphone_factory()

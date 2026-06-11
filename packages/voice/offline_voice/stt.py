@@ -5,11 +5,21 @@ import tempfile
 import wave
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 
 SUPPORTED_LANGS = {"it", "en", "de", "fr"}
 DEFAULT_MODEL_SIZE = "small"
+DEFAULT_MIN_SPEECH_SECONDS = 0.4
+HALLUCINATION_BLACKLIST = {
+    "...",
+    "grazie",
+    "sottotitoli e revisione a cura di qtss",
+    "thank you",
+    "thanks",
+    "you",
+}
 
 
 def map_whisper_language(language: str | None) -> str:
@@ -22,6 +32,44 @@ def map_whisper_language(language: str | None) -> str:
 class Transcript:
     text: str
     lang: str
+
+
+class TranscriptDiscardReason(str, Enum):
+    TOO_SHORT = "troppo breve"
+    EMPTY = "trascrizione vuota"
+    TOO_SHORT_TEXT = "trascrizione vuota"
+    HALLUCINATION = "trascrizione vuota"
+
+
+@dataclass(frozen=True)
+class TranscriptDecision:
+    emit: bool
+    reason: TranscriptDiscardReason | None = None
+
+
+def get_min_speech_seconds() -> float:
+    return float(os.getenv("OFFLINE_VOICE_MIN_SPEECH_S", str(DEFAULT_MIN_SPEECH_SECONDS)))
+
+
+def should_emit_transcript(
+    text: str,
+    *,
+    duration_seconds: float,
+    min_speech_seconds: float | None = None,
+) -> TranscriptDecision:
+    if min_speech_seconds is None:
+        min_speech_seconds = get_min_speech_seconds()
+    if duration_seconds < min_speech_seconds:
+        return TranscriptDecision(False, TranscriptDiscardReason.TOO_SHORT)
+
+    normalized = " ".join(text.strip().lower().split())
+    if not normalized:
+        return TranscriptDecision(False, TranscriptDiscardReason.EMPTY)
+    if len(normalized) < 3:
+        return TranscriptDecision(False, TranscriptDiscardReason.TOO_SHORT_TEXT)
+    if normalized in HALLUCINATION_BLACKLIST:
+        return TranscriptDecision(False, TranscriptDiscardReason.HALLUCINATION)
+    return TranscriptDecision(True)
 
 
 class FasterWhisperSTT:
@@ -42,6 +90,7 @@ class FasterWhisperSTT:
         self.model_size = model_size or os.getenv("WHISPER_MODEL", DEFAULT_MODEL_SIZE)
         self.device = device or os.getenv("WHISPER_DEVICE", "auto")
         self.compute_type = compute_type or os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+        self.language = os.getenv("WHISPER_LANGUAGE") or None
         self.reporter = reporter
         self._model = None
 
@@ -74,12 +123,14 @@ class FasterWhisperSTT:
                 wav.setframerate(sample_rate)
                 wav.writeframes(pcm)
 
-            segments, info = self.model.transcribe(
-                audio_file.name,
-                vad_filter=False,
-                beam_size=1,
-                condition_on_previous_text=False,
-            )
+            kwargs = {
+                "vad_filter": False,
+                "beam_size": 1,
+                "condition_on_previous_text": False,
+            }
+            if self.language:
+                kwargs["language"] = self.language
+            segments, info = self.model.transcribe(audio_file.name, **kwargs)
             texts: list[str] = []
             for segment in segments:
                 text = segment.text.strip()

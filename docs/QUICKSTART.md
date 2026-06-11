@@ -85,5 +85,9 @@ curl -X POST http://localhost:8787/tools/call \
 | Port 7710 busy | `pkill -f "bus/index"` and relaunch |
 | Ollama down | Router falls back to the Anthropic API if `ANTHROPIC_API_KEY` is set; otherwise a polite error reply |
 | Kokoro down | `make dev-voice` tries to start the Kokoro container; if Docker is unavailable, replies stay silent |
+| `🎤 In ascolto...` repeats or triggers on room noise | Tune VAD with `OFFLINE_VOICE_VAD_AGGRESSIVENESS=2`, `OFFLINE_VOICE_SPEECH_START_MS=200`, `OFFLINE_VOICE_SPEECH_END_MS=700` |
+| Assistant voice is captured from speakers | Normal capture is blocked while speaking; barge-in requires `OFFLINE_VOICE_BARGE_MS=400`, then capture reopens after `OFFLINE_VOICE_REFRACTORY_MS=300` |
+| Whisper returns short garbage like `You` / `Thank you` | Segments shorter than `OFFLINE_VOICE_MIN_SPEECH_S=0.4` and known noise transcripts are discarded with a visible status line |
+| Whisper guesses the wrong language | Set `WHISPER_LANGUAGE=it` (or `en`, `de`, `fr`) to pin faster-whisper instead of auto-detecting |
 | `mcp-screen` fallback warning | `make setup-mcp-screen` |
 | Online modes show only 3 tools | The core (:8787) is not running — check `npm run serve` / `./start.sh` |
