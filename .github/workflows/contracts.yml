@@ -1,0 +1,65 @@
+name: contracts
+
+on:
+  push:
+    paths:
+      - "packages/contracts/**"
+      - "packages/voice/contracts_gen/**"
+      - "packages/voice/tests/**"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install TS dependencies
+        run: npm ci
+        working-directory: packages/contracts
+
+      - name: TS contract tests
+        run: npm test
+        working-directory: packages/contracts
+
+      - name: Regenerate JSON Schema and check sync
+        run: |
+          npm run gen
+          git diff --exit-code dist-schema
+        working-directory: packages/contracts
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies (contract subset only)
+        run: pip install "pydantic>=2" pytest "datamodel-code-generator==0.26.5"
+
+      - name: Regenerate Pydantic models and check sync
+        run: |
+          datamodel-codegen \
+            --input packages/contracts/dist-schema/events.schema.json \
+            --input-file-type jsonschema \
+            --output packages/voice/contracts_gen/events.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --target-python-version 3.12 \
+            --disable-timestamp \
+            --custom-file-header "# GENERATED from @stark-ai/contracts — DO NOT EDIT. Regenerate with 'make codegen'."
+          datamodel-codegen \
+            --input packages/contracts/dist-schema/persona.schema.json \
+            --input-file-type jsonschema \
+            --output packages/voice/contracts_gen/persona.py \
+            --output-model-type pydantic_v2.BaseModel \
+            --target-python-version 3.12 \
+            --disable-timestamp \
+            --custom-file-header "# GENERATED from @stark-ai/contracts — DO NOT EDIT. Regenerate with 'make codegen'."
+          git diff --exit-code packages/voice/contracts_gen
+
+      - name: Python contract tests
+        run: pytest tests/test_contracts.py -v
+        working-directory: packages/voice
