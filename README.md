@@ -2,7 +2,7 @@
 
 # STARK-AI
 
-STARK-AI is a local/cloud AI voice assistant in Iron Man style. The project combines a React UI with LiveKit, a Python voice agent, and a Node/TypeScript core that acts as the operational "brain" for LLM routing, session memory, and tools.
+STARK-AI is a local/cloud AI voice assistant in Iron Man style. The project combines a React UI with LiveKit, a Python voice layer, and a Node/TypeScript core that acts as the operational "brain" for LLM routing, session memory, an event bus, and tools.
 
 The two main personas are:
 
@@ -17,17 +17,17 @@ In practice, STARK-AI is a **personal voice assistant you talk to from the brows
 
 **You speak, it answers — with a personality.** Open the HUD-style dashboard, talk into the microphone, and the assistant listens, thinks, and replies with a synthesized voice. Say `JARVIS` as your first word and you get the formal engineer; anything else and FRIDAY, the blunt personal assistant, takes the call. Persona and LLM backend can also be switched live from the UI without restarting anything.
 
-**Local-first, cloud when it counts.** The Node core routes every request by weight: everyday questions go to a local Ollama model (free, private, works offline), while heavy work — long inputs, manuscript writing, strategic briefs — is automatically escalated to the Anthropic API, picking the cheapest adequate tier (Haiku for classification/extraction, Sonnet for writing/analysis, Opus for manuscript- and strategy-grade tasks). Speech synthesis runs on a local Kokoro container, so in local mode your voice never leaves the machine. The result: an always-on assistant whose marginal cost is near zero, spending API money only where quality demands it.
+**Local-first, cloud when it counts.** The Node core routes every request by weight and context: everyday/offline requests go to a local Ollama model (free, private, works offline), while heavy online work — long inputs, manuscript writing, strategic briefs — can be escalated to the Anthropic API, picking the cheapest adequate tier (Haiku for classification/extraction, Sonnet for writing/analysis, Opus for manuscript- and strategy-grade tasks). Speech synthesis runs on local Kokoro in the voice layer, so in local/offline mode your voice never leaves the machine. The result: an always-on assistant whose marginal cost is near zero, spending API money only where quality demands it.
 
-**It executes, not just chats.** Through tool calling the assistant checks the weather, searches the web, sends e-mail via Gmail, reads files, and tells the time — by voice, end to end.
+**It executes, not just chats.** Through one unified tool registry the assistant can call in-process tools and MCP tools for weather, web/search/browser helpers, productivity actions, files, screen capture/analysis, local OS actions, dev helpers, KDP workflow state, and knowledge-base search — by voice, end to end.
 
 **It runs a real publishing operation.** The core embeds the operational brain of an Amazon KDP book-production pipeline: it can scaffold a new book project (`newBook`), ingest Helium10 Cerebro keyword research (`ingestCerebro`), report production status (`bookStatus`), and execute workflow phases (`runPhase`). A local semantic knowledge base (`kbIndex`/`kbSearch`, embeddings via `bge-m3`) acts as cross-book brand memory. In concrete terms: you can ask out loud *"where is the book at?"* and get an answer computed from the actual production state on disk.
 
-A typical round trip: the browser captures your voice → LiveKit streams it to the Python agent → STT transcribes it → the Node core routes it (Ollama or Anthropic), possibly invoking tools → the reply comes back as text → Kokoro speaks it in the persona's voice — all locally orchestrated, in a few seconds.
+A typical online round trip: the browser captures your voice → LiveKit streams it to the Python agent → STT transcribes it → the agent sends `stt.final` to the core WebSocket bus → the real brain routes it (Ollama or Anthropic), streams tokens, and may invoke MCP/in-process tools → the bus emits `tts.speak` → Kokoro speaks it in the persona's voice. The offline voice client uses the same bus contract without LiveKit or Docker LiveKit.
 
 ## Monorepo Architecture
 
-The repository does not have a root `package.json`: Node packages are managed inside `packages/core` and `packages/ui`, while the voice component is Python.
+The repository has a small root `package.json` for shared dev helpers; runtime Node packages are managed inside `packages/core`, `packages/contracts`, `packages/ui`, and `tools/mcp-*`, while the voice component is Python.
 
 ```text
 STARK-AI/
@@ -60,14 +60,23 @@ LiveKit Room
   └─ Voice Agent Python
      ├─ Gemini realtime if mode=gemini
      ├─ STT/LLM/TTS pipeline if mode=gpt
-     └─ HTTP bridge to Core Node if mode=ollama or mode=claude
+     └─ WS event bridge to Core Hub :7710 if mode=ollama or mode=claude
+        └─ falls back to Core HTTP /ask if the hub is unavailable
 
-Core Node :8787
-  ├─ POST /ask
-  ├─ POST /translate
-  ├─ POST /speak
-  ├─ GET /health
-  └─ GET /stats
+Offline Voice Client
+  └─ Whisper/Kokoro voice loop
+     └─ same WS event contract to Core Hub :7710
+
+Core Node
+  ├─ WS Hub :7710
+  │  ├─ RealBrain by default (STARK_BRAIN=real)
+  │  └─ FakeBrain for tests/demos (STARK_BRAIN=fake)
+  └─ HTTP :8787
+     ├─ POST /ask
+     ├─ POST /translate
+     ├─ POST /speak
+     ├─ GET /health
+     └─ GET /stats
 ```
 
 ## Main Packages
@@ -94,10 +103,12 @@ Python layer for LiveKit Agents, token server, and personas.
 
 Relevant files:
 
-- `agent.py`: LiveKit agent entrypoint. Reads mode/persona from the token server, starts Gemini realtime or an STT/LLM/TTS pipeline.
+- `agent.py`: LiveKit agent entrypoint. Reads mode/persona from the token server, starts Gemini realtime, GPT STT/LLM/TTS, or the core WS bridge for `ollama`/`claude`.
+- `hub_bridge.py`: typed WebSocket bridge to the core event bus with HTTP `/ask` fallback.
+- `offline_voice/*`: real offline front-door using local VAD/STT/TTS and the same WS event contract.
 - `token_server.py`: FastAPI server on port `8788`; generates LiveKit tokens, dispatches the agent, and manages `mode`/`persona`.
 - `tts_kokoro.py`: OpenAI-compatible TTS adapter to local Kokoro (`KOKORO_URL`).
-- `tools.py`: voice tools `get_weather`, `search_web`, `send_email`.
+- `tools.py`: direct LiveKit tools used by Gemini/GPT paths; `ollama`/`claude` use the core unified registry instead.
 - `personas/jarvis.py`: prompt, session instruction, and Kokoro voice for JARVIS.
 - `personas/friday.py`: prompt, session instruction, and Kokoro voice for FRIDAY.
 - `personas/detect.py`: minimal detection: if the user's first word is `JARVIS`, selects JARVIS; otherwise FRIDAY.
@@ -109,9 +120,11 @@ Node/TypeScript core of the JARVIS brain.
 Main responsibilities:
 
 - HTTP server on port `8787`;
+- WebSocket event hub on port `7710`;
+- real bus brain with streaming LLM and true tool-use loop;
 - conversation/session orchestration;
 - local/API routing;
-- tool registry;
+- unified in-process + MCP tool registry;
 - local Ollama integration;
 - Anthropic API integration;
 - utility endpoints for translation, macOS system speak, health, and stats.
@@ -119,6 +132,8 @@ Main responsibilities:
 Relevant files:
 
 - `src/server.ts`: creates the HTTP server and registers endpoints `/ask`, `/translate`, `/speak`, `/health`, `/stats`.
+- `src/bus/index.ts`: starts the WS hub and selects `RealBrain`/`FakeBrain` through `STARK_BRAIN`.
+- `src/brain/real.ts`: event-bus brain with persona prompts, streaming providers, tool loop, fallback, and barge-in cancellation.
 - `src/config.ts`: loads models, Ollama URL, routing thresholds, and session path.
 - `src/core/router.ts`: decides `local` vs `api`.
 - `src/core/tier.ts`: chooses API tier `haiku`, `sonnet`, `opus`.
@@ -126,6 +141,7 @@ Relevant files:
 - `src/llm/ollama.ts`: `/api/chat` client for Ollama.
 - `src/llm/anthropic.ts`: Anthropic Messages API client.
 - `src/tools/builtins/*`: local tools registered in the core, including time, weather, file read, KDP/book workflow, and knowledge base.
+- `src/tools/mcp/*` and `tools/mcp-*`: MCP client/runtime and external tool servers for OS, files, web, screen, productivity, and dev helpers.
 
 ## Technology Stack
 
@@ -336,8 +352,8 @@ Actual behavior in `packages/voice/agent.py`:
 
 - `gemini`: starts a Gemini realtime session with voice `Fenrir` for JARVIS and `Aoede` for FRIDAY; on timeout or error it falls back to the `gpt` pipeline.
 - `gpt`: uses the LiveKit pipeline with OpenAI STT, Silero VAD, OpenAI LLM `gpt-4o-mini`, and Kokoro TTS.
-- `ollama`: uses the STT/VAD/TTS pipeline, but the LLM is `JarvisLLM`, an HTTP bridge to `POST {JARVIS_URL}/ask`.
-- `claude`: in the voice agent, uses the same `JarvisLLM` bridge to the core; the actual choice between Ollama and Anthropic happens in the Node core.
+- `ollama`: uses the STT/VAD/TTS pipeline, but the LLM is `JarvisLLM`, a WS event bridge to the core hub with HTTP `/ask` fallback.
+- `claude`: in the voice agent, uses the same `JarvisLLM` bridge to the core; the actual choice between Ollama and Anthropic happens in the Node core router.
 
 ### Routing in the Node Core
 
