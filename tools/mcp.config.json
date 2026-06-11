@@ -1,0 +1,20 @@
+{
+  "servers": [
+    {
+      "name": "mcp-os",
+      "command": "npm",
+      "args": ["--silent", "run", "dev"],
+      "cwd": "../../tools/mcp-os",
+      "timeoutMs": 10000,
+      "retryBackoffMs": 100
+    },
+    {
+      "name": "mcp-files",
+      "command": "npm",
+      "args": ["--silent", "run", "dev"],
+      "cwd": "../../tools/mcp-files",
+      "timeoutMs": 10000,
+      "retryBackoffMs": 100
+    }
+  ]
+}
