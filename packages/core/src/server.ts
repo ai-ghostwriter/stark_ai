@@ -141,6 +141,53 @@ export async function handleAsk(
   }
 }
 
+export function handleToolsList(registry: Registry): HttpJsonResult {
+  const tools = registry.schemas().map((schema) => ({
+    name: schema.function.name,
+    description: schema.function.description,
+    parameters: schema.function.parameters,
+  }));
+  return { status: 200, json: { tools } };
+}
+
+function isToolResultShape(value: unknown): value is { ok: boolean } {
+  return typeof value === "object" && value !== null && "ok" in value && typeof (value as { ok: unknown }).ok === "boolean";
+}
+
+export async function handleToolsCall(registry: Registry, body: string): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { ok: false, error: { code: "BAD_REQUEST", message: "Invalid JSON body." } } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("name" in parsed) ||
+    typeof parsed.name !== "string" ||
+    ("args" in parsed && parsed.args !== undefined && (typeof parsed.args !== "object" || parsed.args === null || Array.isArray(parsed.args)))
+  ) {
+    return { status: 400, json: { ok: false, error: { code: "BAD_REQUEST", message: "Expected { name: string, args?: object }." } } };
+  }
+
+  const tool = registry.get(parsed.name);
+  if (!tool) {
+    return { status: 404, json: { ok: false, error: { code: "UNKNOWN_TOOL", message: `Unknown tool: ${parsed.name}` } } };
+  }
+
+  const args = "args" in parsed && parsed.args !== undefined ? parsed.args : {};
+  try {
+    const result = await tool.handler(args as Record<string, unknown>);
+    // MCP handles already return a structured ToolResult; plain in-process results get wrapped.
+    const json = isToolResultShape(result) ? result : { ok: true, data: result };
+    return { status: 200, json };
+  } catch (e) {
+    return { status: 200, json: { ok: false, error: { code: "TOOL_ERROR", message: (e as Error).message } } };
+  }
+}
+
 export async function handleTranslate(translateText: TranslateText, body: string): Promise<HttpJsonResult> {
   let parsed: unknown;
   try {
@@ -288,6 +335,21 @@ export function createJarvisServer() {
           toolNames,
         }),
       );
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/tools") {
+      await ready;
+      const result = handleToolsList(registry);
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/tools/call") {
+      await ready;
+      const body = await readBody(req);
+      const result = await handleToolsCall(registry, body);
+      sendJson(res, result.status, result.json);
       return;
     }
 
