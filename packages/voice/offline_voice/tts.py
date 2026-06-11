@@ -10,6 +10,8 @@ KOKORO_MODEL = "kokoro"
 PERSONA_VOICES = {
     "jarvis": {"kokoro": "am_adam", "edgetts": "en-US-GuyNeural"},
     "friday": {"kokoro": "af_sky", "edgetts": "en-IE-EmilyNeural"},
+    "veronica": {"kokoro": "af_bella", "edgetts": "en-GB-SoniaNeural"},
+    "warmachine": {"kokoro": "am_michael", "edgetts": "en-US-ChristopherNeural"},
     "default": {"kokoro": "am_adam", "edgetts": "en-US-GuyNeural"},
 }
 DEFAULT_KOKORO_VOICE = PERSONA_VOICES["default"]["kokoro"]

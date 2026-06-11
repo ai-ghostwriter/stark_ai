@@ -113,7 +113,7 @@ describe("FakeBrain", () => {
     const emitted: Event[] = [];
 
     await fakeBrain.handle(
-      { v: 1, type: "stt.final", text: "passa a veronica", lang: "it" },
+      { v: 1, type: "stt.final", text: "passa a ultron", lang: "it" },
       (event) => emitted.push(event),
     );
 
@@ -128,7 +128,7 @@ describe("FakeBrain", () => {
     expect(emitted.at(-1)).toEqual({
       v: 1,
       type: "tts.speak",
-      text: 'Ho ricevuto: "passa a veronica"',
+      text: 'Ho ricevuto: "passa a ultron"',
       persona: "jarvis",
     });
   });

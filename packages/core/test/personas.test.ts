@@ -10,7 +10,7 @@ describe("persona registry", () => {
   it("loads and validates bundled persona profiles", () => {
     const profiles = personaRegistry.list();
 
-    expect(profiles.map((profile) => profile.id).sort()).toEqual(["friday", "jarvis"]);
+    expect(profiles.map((profile) => profile.id).sort()).toEqual(["friday", "jarvis", "veronica", "warmachine"]);
     for (const profile of profiles) {
       expect(() => PersonaProfile.parse(profile)).not.toThrow();
       expect(profile.agentInstruction.length).toBeGreaterThan(0);
@@ -24,7 +24,7 @@ describe("persona registry", () => {
       kokoro: "af_sky",
       edgetts: "en-IE-EmilyNeural",
     });
-    expect(() => personaRegistry.get("veronica")).toThrow("Unknown persona profile: veronica");
+    expect(() => personaRegistry.get("default")).toThrow("Unknown persona profile: default");
   });
 
   it("fails fast with a clear error for a corrupted profile", async () => {
@@ -51,7 +51,7 @@ describe("active persona state", () => {
   it("rejects an unknown persona without changing state", () => {
     const state = createActivePersonaState(personaRegistry);
 
-    expect(() => state.switch("veronica")).toThrow("Unknown persona profile: veronica");
+    expect(() => state.switch("default")).toThrow("Unknown persona profile: default");
     expect(state.current()).toBe("jarvis");
   });
 });

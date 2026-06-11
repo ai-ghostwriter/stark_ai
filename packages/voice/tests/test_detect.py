@@ -24,3 +24,19 @@ def test_friday_default_on_empty():
 
 def test_friday_default_on_whitespace():
     assert detect_persona("   ") == "friday"
+
+
+def test_veronica_first_word():
+    assert detect_persona("VERONICA scrivi il capitolo tre") == "veronica"
+
+
+def test_warmachine_single_word():
+    assert detect_persona("warmachine rapporto di produzione") == "warmachine"
+
+
+def test_warmachine_two_words():
+    assert detect_persona("War Machine come procede il libro?") == "warmachine"
+
+
+def test_war_alone_is_not_warmachine():
+    assert detect_persona("war and peace è un libro") == "friday"

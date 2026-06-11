@@ -4,6 +4,7 @@ import { loadConfig, type Config } from "../config.js";
 import { decide } from "../core/router.js";
 import { activePersona, type ActivePersonaState } from "../personas/active.js";
 import { personaRegistry, type PersonaId, type PersonaRegistry } from "../personas/registry.js";
+import { detectPersonaSwitch } from "../personas/switchIntent.js";
 import type { Registry } from "../tools/registry.js";
 
 type BrainInput = Extract<Event, { type: "stt.final" | "barge_in" }>;
@@ -51,7 +52,7 @@ export class FakeBrain {
       return;
     }
 
-    const switchTarget = this.detectPersonaSwitch(event.text);
+    const switchTarget = detectPersonaSwitch(event.text, this.personas);
     if (switchTarget) {
       const profile = this.personas.get(switchTarget);
       this.activePersonas.switch(switchTarget);
@@ -65,7 +66,7 @@ export class FakeBrain {
       emit({
         v: 1,
         type: "tts.speak",
-        text: `${profile.displayName} ${switchTarget === "jarvis" ? "attivo" : "attiva"}.`,
+        text: `${profile.displayName} ${["jarvis", "warmachine"].includes(switchTarget) ? "attivo" : "attiva"}.`,
         persona: switchTarget,
       });
       return;
@@ -122,15 +123,6 @@ export class FakeBrain {
     emit({ v: 1, type: "tts.speak", text: `Ho ricevuto: "${event.text}"`, persona: this.activePersonas.current() });
   }
 
-  private detectPersonaSwitch(text: string): PersonaId | null {
-    const normalized = text.trim().toLowerCase();
-    const match = /^(?:passa a|switch to)\s+([a-z]+)\s*$/i.exec(normalized);
-    if (!match) return null;
-
-    const target = match[1];
-    if (!target || !this.personas.has(target)) return null;
-    return target;
-  }
 
   private optsOnline(): boolean {
     return this.online;

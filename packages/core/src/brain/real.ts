@@ -6,6 +6,7 @@ import { OllamaDownError } from "../llm/ollama.js";
 import type { Message, RouteCtx, ToolCall } from "../llm/types.js";
 import { activePersona, type ActivePersonaState } from "../personas/active.js";
 import { personaRegistry, type PersonaId, type PersonaRegistry } from "../personas/registry.js";
+import { detectPersonaSwitch } from "../personas/switchIntent.js";
 import { Registry } from "../tools/registry.js";
 
 type BrainInput = Extract<Event, { type: "stt.final" | "barge_in" }>;
@@ -86,7 +87,7 @@ export class RealBrain {
       return;
     }
 
-    const switchTarget = this.detectPersonaSwitch(event.text);
+    const switchTarget = detectPersonaSwitch(event.text, this.personas);
     if (switchTarget) {
       const profile = this.personas.get(switchTarget);
       this.activePersonas.switch(switchTarget);
@@ -100,7 +101,7 @@ export class RealBrain {
       emit({
         v: 1,
         type: "tts.speak",
-        text: `${profile.displayName} ${switchTarget === "jarvis" ? "attivo" : "attiva"}.`,
+        text: `${profile.displayName} ${["jarvis", "warmachine"].includes(switchTarget) ? "attivo" : "attiva"}.`,
         persona: switchTarget,
       });
       return;
@@ -256,15 +257,6 @@ export class RealBrain {
     return [{ role: "system", content: `${profile.agentInstruction.trim()}${priming}` }, ...messages];
   }
 
-  private detectPersonaSwitch(text: string): PersonaId | null {
-    const normalized = text.trim().toLowerCase();
-    const match = /^(?:passa a|switch to)\s+([a-z]+)\s*$/i.exec(normalized);
-    if (!match) return null;
-
-    const target = match[1];
-    if (!target || !this.personas.has(target)) return null;
-    return target;
-  }
 
   private isStale(activeRun: number, signal: AbortSignal): boolean {
     return signal.aborted || this.runId !== activeRun;
