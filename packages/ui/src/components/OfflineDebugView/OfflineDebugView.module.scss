@@ -97,6 +97,18 @@
   white-space: pre-wrap;
 }
 
+.routeLine {
+  color: rgba(255, 210, 122, 0.9);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.routeLabel {
+  color: rgba(116, 247, 178, 0.9);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .log {
   display: grid;
   gap: 10px;

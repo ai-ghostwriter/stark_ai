@@ -16,7 +16,7 @@ type HubEvent =
 
 type TranscriptLine = {
   id: number;
-  type: "user" | "agent" | "tts";
+  type: "user" | "agent" | "tts" | "route";
   text: string;
   streaming?: boolean;
 };
@@ -36,6 +36,13 @@ function textValue(value: unknown): string {
 function appendTranscript(lines: TranscriptLine[], event: HubEvent): TranscriptLine[] {
   if (event.type === "stt.final") {
     return [...lines, { id: Date.now() + lines.length, type: "user", text: textValue(event.text) }];
+  }
+
+  if (event.type === "route.info") {
+    const provider = textValue(event.provider);
+    const model = textValue(event.model);
+    const reason = textValue(event.reason);
+    return [...lines, { id: Date.now() + lines.length, type: "route", text: `${provider} · ${model} · ${reason}` }];
   }
 
   if (event.type === "agent.token") {
@@ -130,11 +137,19 @@ export function OfflineDebugView() {
             <div className={styles.transcript}>
               {transcript.map((line) => (
                 <div className={styles.line} key={line.id}>
-                  <span className={styles.lineType}>
-                    {line.type}
-                    {line.streaming ? " streaming" : ""}
-                  </span>
-                  <span className={styles.lineText}>{line.text}</span>
+                  {line.type === "route" ? (
+                    <span className={styles.routeLine}>
+                      <span className={styles.routeLabel}>[route]</span> {line.text}
+                    </span>
+                  ) : (
+                    <>
+                      <span className={styles.lineType}>
+                        {line.type}
+                        {line.streaming ? " streaming" : ""}
+                      </span>
+                      <span className={styles.lineText}>{line.text}</span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
