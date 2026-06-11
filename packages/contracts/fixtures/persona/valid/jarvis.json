@@ -1,0 +1,9 @@
+{
+  "id": "jarvis",
+  "displayName": "JARVIS",
+  "voice": { "kokoro": "am_adam", "edgetts": "en-US-GuyNeural" },
+  "agentInstruction": "Schema placeholder. The real AGENT_INSTRUCTION block migrates verbatim from packages/voice/personas/jarvis.py in Slice 3.",
+  "sessionInstruction": "Schema placeholder. The real SESSION_INSTRUCTION block migrates verbatim in Slice 3.",
+  "routingHints": { "preferred": "local", "escalateOn": ["deep_analysis"] },
+  "language": "auto"
+}

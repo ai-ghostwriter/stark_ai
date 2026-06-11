@@ -1,0 +1,8 @@
+{
+  "id": "ultron",
+  "displayName": "ULTRON",
+  "voice": { "kokoro": "am_adam" },
+  "agentInstruction": "x",
+  "sessionInstruction": "y",
+  "routingHints": { "preferred": "local", "escalateOn": [] }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "jarvis",
+  "displayName": "JARVIS",
+  "voice": { "kokoro": "am_adam" },
+  "sessionInstruction": "y",
+  "routingHints": { "preferred": "local", "escalateOn": [] }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "friday",
+  "displayName": "FRIDAY",
+  "voice": { "kokoro": "af_sky", "edgetts": "en-IE-EmilyNeural" },
+  "agentInstruction": "Schema placeholder. The real AGENT_INSTRUCTION block migrates verbatim from packages/voice/personas/friday.py in Slice 3.",
+  "sessionInstruction": "Schema placeholder. The real SESSION_INSTRUCTION block migrates verbatim in Slice 3.",
+  "routingHints": { "preferred": "cloud", "escalateOn": ["critical_review"] },
+  "language": "auto"
+}

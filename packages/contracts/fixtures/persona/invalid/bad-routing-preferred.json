@@ -1,0 +1,8 @@
+{
+  "id": "friday",
+  "displayName": "FRIDAY",
+  "voice": { "kokoro": "af_sky" },
+  "agentInstruction": "x",
+  "sessionInstruction": "y",
+  "routingHints": { "preferred": "mars", "escalateOn": [] }
+}
