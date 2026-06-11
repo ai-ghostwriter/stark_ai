@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 import asyncio
 import json
+from pathlib import Path
 import sys
 from typing import Any
 
@@ -63,9 +62,20 @@ async def run_minimal_stdio() -> None:
 
 
 async def main() -> None:
+    venv_python = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "python"
     try:
         import mcp  # noqa: F401
-    except Exception:
+    except Exception as exc:
+        if venv_python.exists():
+            raise RuntimeError(
+                f"Official mcp package is unavailable in {sys.executable}; expected venv python at {venv_python}."
+            ) from exc
+        print(
+            "[warn] tools/mcp-screen/.venv is missing; using minimal stdio fallback. "
+            "Run `make setup-mcp-screen` to enable the official python mcp SDK.",
+            file=sys.stderr,
+            flush=True,
+        )
         await run_minimal_stdio()
         return
     await run_fastmcp()

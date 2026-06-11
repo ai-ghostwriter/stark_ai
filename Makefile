@@ -1,11 +1,20 @@
 VOICE_BIN := packages/voice/.venv/bin
 CODEGEN_HEADER := \# GENERATED from @stark-ai/contracts — DO NOT EDIT. Regenerate with 'make codegen'.
 
-.PHONY: codegen test-contracts test-mcp-tools dev-offline dev-voice
+.PHONY: codegen test-contracts test-mcp-tools setup-mcp-screen dev-offline dev-voice
 
 test-mcp-tools: ## run MCP tool server tests
 	cd tools/mcp-os && npm test
 	cd tools/mcp-files && npm test
+	cd tools/mcp-web && npm test
+	cd tools/mcp-productivity && npm test
+	cd tools/mcp-dev && npm test
+	cd tools/mcp-screen && PYTHONPATH=. ./.venv/bin/pytest tests -q
+
+setup-mcp-screen: ## create the mcp-screen venv and install its pinned official MCP SDK dependencies
+	python3 -m venv tools/mcp-screen/.venv
+	tools/mcp-screen/.venv/bin/python -m pip install --upgrade pip
+	tools/mcp-screen/.venv/bin/python -m pip install -r tools/mcp-screen/requirements.txt
 
 dev-offline: ## start offline hub and fake voice stub; hub loads MCP servers from tools/mcp.config.json
 	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \

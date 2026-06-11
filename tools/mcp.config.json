@@ -26,7 +26,7 @@
     },
     {
       "name": "mcp-screen",
-      "command": "python3",
+      "command": ".venv/bin/python",
       "args": ["src/server.py"],
       "cwd": "../../tools/mcp-screen",
       "timeoutMs": 15000,
