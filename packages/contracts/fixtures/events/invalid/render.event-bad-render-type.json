@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "type": "render.event",
+  "id": "evt-0002",
+  "ts": 1765500000000,
+  "tool": "get_daily_brief",
+  "render": "stark.unknown",
+  "title": "Daily Brief",
+  "spoken": "x",
+  "payload": {}
+}

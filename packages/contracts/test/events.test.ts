@@ -10,7 +10,7 @@ describe("event contract — golden fixtures", () => {
     const types = new Set(valid.map(({ raw }) => JSON.parse(raw).type as string));
     expect([...types].sort()).toEqual([
       "agent.done", "agent.token", "barge_in", "hello",
-      "route.info", "stt.final", "stt.partial", "sys.error",
+      "render.event", "route.info", "stt.final", "stt.partial", "sys.error",
       "tool.call", "tool.result", "tts.cancel", "tts.speak",
     ]);
   });

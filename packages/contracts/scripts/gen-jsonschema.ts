@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  AgentDone, AgentToken, BargeIn, Event, Hello, RouteInfo,
+  AgentDone, AgentToken, BargeIn, Event, Hello, RenderEvent, RouteInfo,
   SttFinal, SttPartial, SysError, ToolCall, ToolResult, TtsCancel, TtsSpeak,
 } from "../src/events.js";
 import { PersonaProfile, RoutingHints } from "../src/persona.js";
@@ -13,7 +13,7 @@ const eventSchema = zodToJsonSchema(Event, {
   name: "Event",
   definitions: {
     Hello, SttPartial, SttFinal, BargeIn, TtsSpeak, TtsCancel,
-    AgentToken, AgentDone, RouteInfo, ToolCall, ToolResult, SysError,
+    AgentToken, AgentDone, RouteInfo, ToolCall, ToolResult, SysError, RenderEvent,
   },
 });
 writeFileSync("dist-schema/events.schema.json", JSON.stringify(eventSchema, null, 2) + "\n");

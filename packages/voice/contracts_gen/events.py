@@ -39,6 +39,14 @@ class Persona(Enum):
     default = 'default'
 
 
+class Render(Enum):
+    stark_brief = 'stark.brief'
+    stark_metrics = 'stark.metrics'
+    stark_pipeline = 'stark.pipeline'
+    stark_intel = 'stark.intel'
+    stark_actions = 'stark.actions'
+
+
 class V(RootModel[Literal[1]]):
     root: Literal[1]
 
@@ -149,6 +157,21 @@ class SysError(BaseModel):
     message: str
 
 
+class RenderEvent(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    v: V
+    type: Literal['render.event']
+    id: str
+    ts: int
+    tool: str
+    render: Render
+    title: str
+    spoken: str
+    payload: Dict[str, Any]
+
+
 class Event(
     RootModel[
         Union[
@@ -164,6 +187,7 @@ class Event(
             ToolCall,
             ToolResult,
             SysError,
+            RenderEvent,
         ]
     ]
 ):
@@ -180,6 +204,7 @@ class Event(
         ToolCall,
         ToolResult,
         SysError,
+        RenderEvent,
     ]
 
 

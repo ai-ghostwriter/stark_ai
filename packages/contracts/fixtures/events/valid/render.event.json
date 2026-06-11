@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "type": "render.event",
+  "id": "evt-0001",
+  "ts": 1765500000000,
+  "tool": "get_daily_brief",
+  "render": "stark.brief",
+  "title": "Daily Brief",
+  "spoken": "Tre segnali oggi: vendite in crescita, una recensione critica su Mia Meyer, scadenza outline Hashimoto.",
+  "payload": { "summary": "Giornata in controllo." }
+}

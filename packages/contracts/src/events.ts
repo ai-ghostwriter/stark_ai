@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RenderType } from "./render.js";
 
 export const Lang = z.enum(["auto", "it", "en", "de", "fr"]);
 export const PersonaId = z.enum(["jarvis", "friday", "veronica", "warmachine", "default"]);
@@ -32,10 +33,17 @@ export const ToolResult = z.object({ ...base, type: z.literal("tool.result"),
 export const SysError   = z.object({ ...base, type: z.literal("sys.error"),
   scope: z.string(), message: z.string() });
 
+// — agent-core → hud (pannelli) —
+export const RenderEvent = z.object({ ...base, type: z.literal("render.event"),
+  id: z.string(), ts: z.number().int(), tool: z.string(), render: RenderType,
+  title: z.string(), spoken: z.string(), payload: z.record(z.unknown()) });
+export type RenderEvent = z.infer<typeof RenderEvent>;
+
 export const Event = z.discriminatedUnion("type", [
   Hello, SttPartial, SttFinal, BargeIn,
   TtsSpeak, TtsCancel,
   AgentToken, AgentDone, RouteInfo, ToolCall, ToolResult, SysError,
+  RenderEvent,
 ]);
 export type Event = z.infer<typeof Event>;
 

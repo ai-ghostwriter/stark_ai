@@ -301,6 +301,59 @@
       ],
       "additionalProperties": false
     },
+    "RenderEvent": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "render.event"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "integer"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "render": {
+          "type": "string",
+          "enum": [
+            "stark.brief",
+            "stark.metrics",
+            "stark.pipeline",
+            "stark.intel",
+            "stark.actions"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "spoken": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "ts",
+        "tool",
+        "render",
+        "title",
+        "spoken",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
     "Event": {
       "anyOf": [
         {
@@ -338,6 +391,9 @@
         },
         {
           "$ref": "#/definitions/SysError"
+        },
+        {
+          "$ref": "#/definitions/RenderEvent"
         }
       ]
     }
