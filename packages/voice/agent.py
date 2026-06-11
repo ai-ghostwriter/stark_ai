@@ -211,7 +211,7 @@ async def start_gemini_session(ctx: agents.JobContext, persona_state: dict) -> A
             llm=google.beta.realtime.RealtimeModel(
                 voice="Fenrir" if persona_state.get("persona") == "jarvis" else "Aoede",
                 temperature=0.8,
-                output_audio_transcription=types.AudioTranscriptionConfig(languageCodes=["it-IT"]),
+                output_audio_transcription=types.AudioTranscriptionConfig(),
             ),
             tools=session_tools,
         ),

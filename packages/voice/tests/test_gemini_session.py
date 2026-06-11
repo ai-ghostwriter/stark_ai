@@ -33,6 +33,7 @@ class FakeAudioTranscriptionConfig:
     created_kwargs = []
 
     def __init__(self, **kwargs):
+        self.language_codes = kwargs.get("language_codes")
         FakeAudioTranscriptionConfig.created_kwargs.append(kwargs)
 
 
@@ -55,5 +56,7 @@ async def test_gemini_session_requests_output_audio_transcription(monkeypatch) -
 
     assert session is FakeAgentSession.created[0]
     assert FakeRealtimeModel.created_kwargs[0]["voice"] == "Fenrir"
-    assert FakeRealtimeModel.created_kwargs[0]["output_audio_transcription"] is not None
-    assert FakeAudioTranscriptionConfig.created_kwargs == [{"languageCodes": ["it-IT"]}]
+    transcription_config = FakeRealtimeModel.created_kwargs[0]["output_audio_transcription"]
+    assert isinstance(transcription_config, FakeAudioTranscriptionConfig)
+    assert transcription_config.language_codes is None
+    assert FakeAudioTranscriptionConfig.created_kwargs == [{}]
