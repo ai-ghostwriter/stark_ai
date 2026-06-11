@@ -25,10 +25,12 @@ from livekit.plugins import google, openai
 from personas import detect_persona, get_persona
 from tts_kokoro import make_tts
 from tools import get_weather, search_web, send_email
+from hub_bridge import DEFAULT_HUB_URL, ask_core
 
 load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 DEFAULT_JARVIS_URL = "http://localhost:8787"
+DEFAULT_CORE_HUB_URL = DEFAULT_HUB_URL
 TOKEN_SERVER_URL = os.getenv("TOKEN_SERVER_URL", "http://localhost:8788")
 DEFAULT_MODE = "gemini"
 VALID_MODES = {"gemini", "ollama", "claude", "gpt"}
@@ -40,11 +42,12 @@ class JarvisLLM(llm.LLM):
     def __init__(self, *, jarvis_url: str | None = None, system_prompt: str = "") -> None:
         super().__init__()
         self._jarvis_url = (jarvis_url or os.getenv("JARVIS_URL") or DEFAULT_JARVIS_URL).rstrip("/")
+        self._hub_url = os.getenv("STARK_HUB_URL", DEFAULT_CORE_HUB_URL)
         self._system_prompt = system_prompt.strip()
 
     @property
     def model(self) -> str:
-        return "jarvis-http"
+        return "jarvis-ws"
 
     @property
     def provider(self) -> str:
@@ -93,22 +96,17 @@ class JarvisLLMStream(llm.LLMStream):
     async def _run(self) -> None:
         request_text = self._jarvis_llm.build_jarvis_text(self._chat_ctx)
         try:
-            async with httpx.AsyncClient(timeout=self._conn_options.timeout) as client:
-                response = await client.post(
-                    self._jarvis_llm.ask_url,
-                    json={"text": request_text},
-                )
+            reply_text = await ask_core(
+                request_text,
+                hub_url=self._jarvis_llm._hub_url,
+                jarvis_url=self._jarvis_llm._jarvis_url,
+                timeout=self._conn_options.timeout,
+                logger=logger,
+            )
         except httpx.TimeoutException as exc:
             raise APIConnectionError("JARVIS request timed out.", retryable=True) from exc
         except httpx.HTTPError as exc:
             raise APIConnectionError(f"Could not reach JARVIS: {exc}", retryable=True) from exc
-
-        if response.status_code != 200:
-            raise APIConnectionError(
-                f"JARVIS returned HTTP {response.status_code}", retryable=False
-            )
-
-        reply_text = response.json().get("reply", "")
         chunk = llm.ChatChunk(
             id=str(uuid.uuid4()),
             delta=llm.ChoiceDelta(role="assistant", content=reply_text),
