@@ -4,6 +4,7 @@ livekit-api
 fastapi
 uvicorn[standard]
 watchfiles
+websockets
 aiohttp
 livekit-plugins-openai
 livekit-plugins-silero
