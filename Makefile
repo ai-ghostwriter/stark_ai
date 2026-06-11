@@ -1,14 +1,18 @@
 VOICE_BIN := packages/voice/.venv/bin
 CODEGEN_HEADER := \# GENERATED from @stark-ai/contracts — DO NOT EDIT. Regenerate with 'make codegen'.
 
-.PHONY: codegen test-contracts dev-offline dev-voice
+.PHONY: codegen test-contracts test-mcp-tools dev-offline dev-voice
 
-dev-offline: ## start offline hub and fake voice stub
+test-mcp-tools: ## run MCP tool server tests
+	cd tools/mcp-os && npm test
+	cd tools/mcp-files && npm test
+
+dev-offline: ## start offline hub and fake voice stub; hub loads MCP servers from tools/mcp.config.json
 	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \
 	  "cd packages/core && npm run dev:hub" \
 	  "packages/voice/.venv/bin/python packages/voice/fake_voice.py"
 
-dev-voice: ## start offline hub and real offline voice client
+dev-voice: ## start offline hub and real offline voice client; hub loads MCP servers from tools/mcp.config.json
 	env -u NO_COLOR npx concurrently --handle-input --default-input-target voice -n hub,voice -c cyan,green \
 	  "cd packages/core && npm run dev:hub" \
 	  "cd packages/voice && ./.venv/bin/python -m offline_voice"
