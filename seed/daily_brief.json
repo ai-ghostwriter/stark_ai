@@ -1,0 +1,15 @@
+{
+  "summary": "Giornata in controllo: vendite DACH in crescita, una recensione critica da gestire, outline Hashimoto in scadenza domani.",
+  "signals": [
+    { "label": "Vendite ieri", "value": "47 copie", "trend": "up" },
+    { "label": "KENP ieri", "value": "12.480 pagine", "trend": "up" },
+    { "label": "Recensioni nuove", "value": "3 (una da 2 stelle)", "trend": "down" },
+    { "label": "ACOS medio", "value": "31%", "trend": "flat" }
+  ],
+  "sections": [
+    { "title": "Pubblicazioni", "line": "Ricettario Diabetici T2 in revisione QA, capitoli 8/12 approvati." },
+    { "title": "Ads", "line": "Campagna DE 'Darmgesundheit' sopra target: +18% click, ACOS stabile." },
+    { "title": "Da gestire", "line": "Recensione 2 stelle su 'Hormonbalance': lamenta tabelle poco leggibili su Kindle." },
+    { "title": "Scadenze", "line": "Outline Hashimoto FR da consegnare entro domani sera." }
+  ]
+}

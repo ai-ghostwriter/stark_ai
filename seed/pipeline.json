@@ -1,0 +1,17 @@
+{
+  "stages": [
+    { "name": "Ricerca", "count": 2 },
+    { "name": "Outline", "count": 1 },
+    { "name": "Scrittura", "count": 2 },
+    { "name": "Revisione", "count": 1 },
+    { "name": "Pubblicato", "count": 14 }
+  ],
+  "deals": [
+    { "name": "Anxiety Toolkit (EN)", "stage": "Ricerca", "value": "stima 900€/anno", "atRisk": false },
+    { "name": "Nicchia KDP.de — Schlaf", "stage": "Ricerca", "value": "da validare", "atRisk": false },
+    { "name": "Hashimoto FR", "stage": "Outline", "value": "stima 1.400€/anno", "atRisk": true },
+    { "name": "Ricettario Diabetici T2", "stage": "Scrittura", "value": "stima 2.100€/anno", "atRisk": false },
+    { "name": "Darmgesundheit Vol. 2", "stage": "Scrittura", "value": "stima 1.700€/anno", "atRisk": false },
+    { "name": "Hormonbalance — fix tabelle", "stage": "Revisione", "value": "retention recensioni", "atRisk": true }
+  ]
+}

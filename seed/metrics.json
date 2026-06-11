@@ -1,0 +1,41 @@
+{
+  "default": "kdp_sales",
+  "series": {
+    "kdp_sales": {
+      "metric": "Vendite KDP",
+      "unit": "copie/giorno",
+      "series": [
+        { "date": "01/06", "value": 28 }, { "date": "02/06", "value": 31 },
+        { "date": "03/06", "value": 26 }, { "date": "04/06", "value": 35 },
+        { "date": "05/06", "value": 38 }, { "date": "06/06", "value": 33 },
+        { "date": "07/06", "value": 41 }, { "date": "08/06", "value": 44 },
+        { "date": "09/06", "value": 40 }, { "date": "10/06", "value": 45 },
+        { "date": "11/06", "value": 47 }, { "date": "12/06", "value": 52 }
+      ]
+    },
+    "kenp_pages": {
+      "metric": "Pagine KENP",
+      "unit": "pagine/giorno",
+      "series": [
+        { "date": "01/06", "value": 8200 }, { "date": "02/06", "value": 9100 },
+        { "date": "03/06", "value": 8800 }, { "date": "04/06", "value": 9600 },
+        { "date": "05/06", "value": 10300 }, { "date": "06/06", "value": 9900 },
+        { "date": "07/06", "value": 11200 }, { "date": "08/06", "value": 10800 },
+        { "date": "09/06", "value": 11700 }, { "date": "10/06", "value": 12100 },
+        { "date": "11/06", "value": 12480 }, { "date": "12/06", "value": 12900 }
+      ]
+    },
+    "reviews": {
+      "metric": "Recensioni cumulative",
+      "unit": "totale",
+      "series": [
+        { "date": "01/06", "value": 214 }, { "date": "02/06", "value": 216 },
+        { "date": "03/06", "value": 219 }, { "date": "04/06", "value": 221 },
+        { "date": "05/06", "value": 224 }, { "date": "06/06", "value": 227 },
+        { "date": "07/06", "value": 229 }, { "date": "08/06", "value": 233 },
+        { "date": "09/06", "value": 236 }, { "date": "10/06", "value": 240 },
+        { "date": "11/06", "value": 243 }, { "date": "12/06", "value": 247 }
+      ]
+    }
+  }
+}

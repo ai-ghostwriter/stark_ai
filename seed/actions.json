@@ -1,0 +1,9 @@
+{
+  "focus": "Chiudere l'outline Hashimoto FR prima che la finestra keyword si raffreddi.",
+  "actions": [
+    { "rank": 1, "title": "Consegnare outline Hashimoto FR", "why": "Scadenza domani sera; la nicchia regge 4.400 ricerche/mese." },
+    { "rank": 2, "title": "Fix tabelle Hormonbalance", "why": "Recensione 2 stelle attiva: ogni giorno di ritardo pesa sul ranking." },
+    { "rank": 3, "title": "Approvare capitoli 9-10 Ricettario", "why": "QA Pepper in attesa; sblocca la pipeline di scrittura." },
+    { "rank": 4, "title": "Tagliare keyword generiche campagne FR", "why": "ACOS oltre 35% non sostenibile, deciso in sessione FRIDAY." }
+  ]
+}
