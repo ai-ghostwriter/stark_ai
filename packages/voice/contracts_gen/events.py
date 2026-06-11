@@ -35,6 +35,7 @@ class Persona(Enum):
     jarvis = 'jarvis'
     friday = 'friday'
     veronica = 'veronica'
+    warmachine = 'warmachine'
     default = 'default'
 
 

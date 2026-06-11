@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const Lang = z.enum(["auto", "it", "en", "de", "fr"]);
-export const PersonaId = z.enum(["jarvis", "friday", "veronica", "default"]);
+export const PersonaId = z.enum(["jarvis", "friday", "veronica", "warmachine", "default"]);
 
 const base = { v: z.literal(1) };
 
