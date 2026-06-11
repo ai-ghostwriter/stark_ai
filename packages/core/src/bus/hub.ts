@@ -34,6 +34,7 @@ type BrainOutput = Extract<Event, {
     | "tts.cancel"
     | "tool.call"
     | "tool.result"
+    | "render.event"
     | "sys.error";
 }>;
 

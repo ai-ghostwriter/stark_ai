@@ -8,6 +8,7 @@ import { activePersona, type ActivePersonaState } from "../personas/active.js";
 import { personaRegistry, type PersonaId, type PersonaRegistry } from "../personas/registry.js";
 import { detectPersonaSwitch } from "../personas/switchIntent.js";
 import { Registry } from "../tools/registry.js";
+import { isRenderResult } from "../tools/render.js";
 
 type BrainInput = Extract<Event, { type: "stt.final" | "barge_in" }>;
 type BrainOutput = Extract<Event, {
@@ -19,6 +20,7 @@ type BrainOutput = Extract<Event, {
     | "tts.cancel"
     | "tool.call"
     | "tool.result"
+    | "render.event"
     | "sys.error";
 }>;
 
@@ -241,6 +243,18 @@ export class RealBrain {
 
     try {
       const data = await tool.handler(args);
+      if (isRenderResult(data)) {
+        // Doppio binario: pannello alla HUD, solo lo spoken al modello —
+        // nessuno vuole sentir leggere sedici numeri ad alta voce.
+        emit({
+          v: 1, type: "render.event", id, ts: Date.now(), tool: name,
+          render: data.render.type, title: data.render.title,
+          spoken: data.spoken, payload: data.render.payload,
+        });
+        emit({ v: 1, type: "tool.result", id, ok: true, data: { spoken: data.spoken } });
+        working.push({ role: "tool", content: data.spoken, tool_name: name });
+        return;
+      }
       const ok = typeof data === "object" && data !== null && "ok" in data ? Boolean((data as { ok: unknown }).ok) : true;
       emit({ v: 1, type: "tool.result", id, ok, data });
       working.push({ role: "tool", content: stringifyToolResult(data), tool_name: name });
