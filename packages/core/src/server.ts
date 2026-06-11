@@ -3,15 +3,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import os from "node:os";
 import { loadConfig } from "./config.js";
 import { Registry } from "./tools/registry.js";
-import { getTime } from "./tools/builtins/time.js";
-import { getWeather } from "./tools/builtins/weather.js";
-import { readFileTool } from "./tools/builtins/readFile.js";
-import { makeIngestCerebro } from "./tools/builtins/ingestCerebro.js";
-import { makeBookStatus } from "./tools/builtins/bookStatus.js";
-import { makeRunPhase } from "./tools/builtins/runPhase.js";
-import { makeNewBook } from "./tools/builtins/newBook.js";
-import { makeKbIndex } from "./tools/builtins/kbIndex.js";
-import { makeKbSearch } from "./tools/builtins/kbSearch.js";
+import { registerBuiltInTools } from "./tools/runtime.js";
+import { registerMcpTools, type McpRuntime } from "./tools/mcp/registry.js";
 import { Session } from "./core/session.js";
 import { JsonSessionStore, type SessionStore } from "./core/sessionStore.js";
 import { collectStats } from "./core/systemStats.js";
@@ -19,7 +12,6 @@ import { translate } from "./core/translate.js";
 import { Orchestrator } from "./core/orchestrator.js";
 import { chatLocal } from "./llm/ollama.js";
 import { chatApi } from "./llm/anthropic.js";
-import { embed as embedRaw, type Embedder } from "./llm/embeddings.js";
 import type { Result, RouteCtx } from "./llm/types.js";
 
 interface AskOrchestrator {
@@ -87,25 +79,34 @@ function createRuntime(): {
   session: Session;
   sessionStore: SessionStore;
   ready: Promise<void>;
+  close: () => Promise<void>;
 } {
   const cfg = loadConfig();
   const registry = new Registry();
-  const ingestCerebro = makeIngestCerebro({ cerebroScript: cfg.cerebroScript });
-  const bookStatus = makeBookStatus();
-  const runPhase = makeRunPhase();
-  const newBook = makeNewBook();
-  const embedder: Embedder = (input) => embedRaw({ url: cfg.ollamaUrl, model: cfg.embedModel, input });
-  const kbIndex = makeKbIndex({ embed: embedder, model: cfg.embedModel });
-  const kbSearch = makeKbSearch({ embed: embedder });
-  for (const t of [getTime, getWeather, readFileTool, ingestCerebro, bookStatus, runPhase, newBook, kbIndex, kbSearch])
-    registry.register(t);
+  registerBuiltInTools(registry, cfg);
   const orchestrator = new Orchestrator({ cfg, registry, chatLocal, chatApi });
   const session = new Session();
   const sessionStore = new JsonSessionStore(cfg.sessionFile);
-  const ready = sessionStore.loadSession().then((history) => {
-    session.setHistory(history);
-  });
-  return { cfg, registry, orchestrator, session, sessionStore, ready };
+  let mcp: McpRuntime | null = null;
+  const ready = Promise.all([
+    sessionStore.loadSession().then((history) => {
+      session.setHistory(history);
+    }),
+    registerMcpTools(registry).then((runtime) => {
+      mcp = runtime;
+    }),
+  ]).then(() => undefined);
+  return {
+    cfg,
+    registry,
+    orchestrator,
+    session,
+    sessionStore,
+    ready,
+    close: async () => {
+      await mcp?.close();
+    },
+  };
 }
 
 export async function handleAsk(
@@ -258,8 +259,8 @@ async function readBody(req: IncomingMessage): Promise<string> {
 }
 
 export function createJarvisServer() {
-  const { cfg, registry, orchestrator, session, sessionStore, ready } = createRuntime();
-  return createServer(async (req, res) => {
+  const { cfg, registry, orchestrator, session, sessionStore, ready, close } = createRuntime();
+  const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
 
     if (req.method === "OPTIONS") {
@@ -317,6 +318,10 @@ export function createJarvisServer() {
 
     sendJson(res, 404, { error: "Not found" });
   });
+  server.on("close", () => {
+    void close();
+  });
+  return server;
 }
 
 const currentModulePath = decodeURIComponent(new URL(import.meta.url).pathname);

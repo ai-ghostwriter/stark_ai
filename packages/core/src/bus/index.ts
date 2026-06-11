@@ -1,4 +1,6 @@
 import { createEventHub } from "./hub.js";
+import { loadConfig } from "../config.js";
+import { createToolRuntime } from "../tools/runtime.js";
 
 async function detectOnlineOnce(): Promise<boolean> {
   const controller = new AbortController();
@@ -18,13 +20,16 @@ async function detectOnlineOnce(): Promise<boolean> {
 }
 
 const online = await detectOnlineOnce();
-const hub = createEventHub({ host: "127.0.0.1", port: 7710, brainOptions: { online } });
+const cfg = loadConfig();
+const tools = await createToolRuntime(cfg);
+const hub = createEventHub({ host: "127.0.0.1", port: 7710, brainOptions: { online, tools: tools.registry } });
 
 await hub.start();
 console.log(`STARK-AI offline event hub listening on ws://127.0.0.1:${hub.port} (online=${online})`);
 
 async function shutdown(): Promise<void> {
   await hub.stop();
+  await tools.mcp.close();
   process.exit(0);
 }
 

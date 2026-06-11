@@ -40,7 +40,7 @@ export interface ToolDef {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
-  handler: (args: Record<string, unknown>) => Promise<string> | string;
+  handler: (args: Record<string, unknown>) => Promise<unknown> | unknown;
 }
 
 export interface RouteCtx {

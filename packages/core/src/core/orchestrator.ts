@@ -58,7 +58,8 @@ export class Orchestrator {
 
     let toolResult: string;
     try {
-      toolResult = String(await tool.handler(call.arguments ?? {}));
+      const rawToolResult = await tool.handler(call.arguments ?? {});
+      toolResult = typeof rawToolResult === "string" ? rawToolResult : JSON.stringify(rawToolResult);
     } catch (e) {
       toolResult = `Errore nell'esecuzione di ${call.name}: ${(e as Error).message}`;
     }

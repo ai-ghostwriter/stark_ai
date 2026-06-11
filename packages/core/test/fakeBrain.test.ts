@@ -4,6 +4,7 @@ import { FakeBrain } from "../src/brain/fake.js";
 import { loadConfig } from "../src/config.js";
 import { createActivePersonaState } from "../src/personas/active.js";
 import { personaRegistry } from "../src/personas/registry.js";
+import { Registry } from "../src/tools/registry.js";
 
 const cfg = loadConfig({});
 
@@ -206,5 +207,28 @@ describe("FakeBrain", () => {
       model: cfg.modelLocal,
       reason: "offline",
     });
+  });
+
+  it("dispatches open_app for apri/open voice intents and emits tool events", async () => {
+    const registry = new Registry();
+    registry.register({
+      name: "open_app",
+      description: "open app",
+      parameters: {},
+      handler: async (args) => ({ ok: true, data: { launched: true, requested: args.appName } }),
+    });
+    const fakeBrain = brain({ tools: registry });
+    const emitted: Event[] = [];
+
+    await fakeBrain.handle(
+      { v: 1, type: "stt.final", text: "apri Calculator", lang: "it" },
+      (event) => emitted.push(event),
+    );
+
+    expect(emitted).toEqual([
+      expect.objectContaining({ v: 1, type: "tool.call", name: "open_app", args: { appName: "Calculator" } }),
+      expect.objectContaining({ v: 1, type: "tool.result", ok: true }),
+      { v: 1, type: "tts.speak", text: "Ho aperto Calculator.", persona: "jarvis" },
+    ]);
   });
 });
