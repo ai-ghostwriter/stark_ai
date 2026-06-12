@@ -1,7 +1,5 @@
-import { BarVisualizer, useVoiceAssistant } from "@livekit/components-react";
 import { Header } from "../Header/Header";
 import { HudPanel } from "../HudPanel/HudPanel";
-import { AgentStatus } from "../AgentStatus/AgentStatus";
 import { ConnectionStatus } from "../ConnectionStatus/ConnectionStatus";
 import { EventLog } from "../EventLog/EventLog";
 import { HudStage } from "../HudStage/HudStage";
@@ -16,8 +14,6 @@ type AppShellProps = {
 };
 
 export function AppShell({ onReconnect }: AppShellProps) {
-  const { state, audioTrack } = useVoiceAssistant();
-
   return (
     <div className={styles.shell}>
       <Header onModeChange={onReconnect} />
@@ -26,22 +22,19 @@ export function AppShell({ onReconnect }: AppShellProps) {
           <ConnectionStatus />
         </HudPanel>
         <HudPanel title="Agente AI" glowIntensity="strong">
-          <AgentStatus />
-        </HudPanel>
-        <HudPanel title="Audio" glowIntensity="dim">
-          <div className={styles.audioLabel}>VOICE CHANNEL // ACTIVE MONITOR</div>
-          <BarVisualizer
-            className={styles.audioGrid}
-            state={state}
-            trackRef={audioTrack}
-            barCount={18}
-            options={{ minHeight: 12, maxHeight: 92 }}
-          />
+          <VoicePanel />
         </HudPanel>
       </aside>
       <main className={styles.center}>
         <HudPanel glowIntensity="strong" className={styles.voicePanel}>
-          <HudStage idle={<VoicePanel />} />
+          <HudStage
+            idle={
+              <div className={styles.stageIdle}>
+                <span>SYSTEM CORE</span>
+                <strong>READY</strong>
+              </div>
+            }
+          />
         </HudPanel>
       </main>
       <aside className={styles.right}>
@@ -56,7 +49,7 @@ export function AppShell({ onReconnect }: AppShellProps) {
         </HudPanel>
       </aside>
       <footer className={styles.footer}>
-        <HudPanel title="Log" glowIntensity="dim">
+        <HudPanel title="Log" glowIntensity="dim" className={styles.footerPanel}>
           <EventLog onReconnect={onReconnect} />
         </HudPanel>
       </footer>

@@ -23,9 +23,23 @@
 }
 
 .controls {
+  position: relative;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.controls :global(.lk-agent-control-bar),
+.controls :global(.lk-control-bar) {
+  position: relative;
+  z-index: 20;
+}
+
+.controls :global(.lk-device-menu),
+.controls :global(.lk-button-group-menu),
+.controls :global(.lk-button-menu) {
+  z-index: 100;
 }
 
 .controls :global(.lk-button),

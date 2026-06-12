@@ -91,6 +91,7 @@ function usePersona(): PersonaState {
 }
 
 const personas: Persona[] = ["friday", "jarvis"];
+const operatorName = import.meta.env.VITE_USER_NAME || "OPERATOR";
 
 export function Header({ onModeChange }: HeaderProps) {
   const now = useClock();
@@ -202,7 +203,7 @@ export function Header({ onModeChange }: HeaderProps) {
       <div className={styles.statusItems}>
         <span>{date}</span>
         <span>{time}</span>
-        <span>RICKY STARK</span>
+        <span>{operatorName}</span>
       </div>
     </header>
   );

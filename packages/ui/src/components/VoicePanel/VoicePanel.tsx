@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useVoiceAssistant } from "@livekit/components-react";
+import { BarVisualizer, useVoiceAssistant } from "@livekit/components-react";
 import { Waveform } from "../Waveform/Waveform";
 import styles from "./VoicePanel.module.scss";
 
@@ -13,7 +13,7 @@ const stateLabels: Record<string, string> = {
 };
 
 export function VoicePanel() {
-  const { state, agentTranscriptions } = useVoiceAssistant();
+  const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
   const label = stateLabels[state] || "STANDBY";
   const activeWaveform = state === "speaking" || state === "listening";
   const transcripts = useMemo(() => agentTranscriptions ?? [], [agentTranscriptions]);
@@ -30,6 +30,16 @@ export function VoicePanel() {
             <Waveform active={activeWaveform} />
           </div>
         </div>
+      </div>
+      <div className={styles.audioMonitor}>
+        <div className={styles.audioLabel}>VOICE CHANNEL // ACTIVE MONITOR</div>
+        <BarVisualizer
+          className={styles.audioGrid}
+          state={state}
+          trackRef={audioTrack}
+          barCount={18}
+          options={{ minHeight: 10, maxHeight: 68 }}
+        />
       </div>
       <div className={styles.transcript}>
         {transcripts.length === 0 ? (

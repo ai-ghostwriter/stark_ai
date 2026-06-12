@@ -25,7 +25,7 @@
 
 .left {
   grid-area: left;
-  grid-template-rows: 132px 1fr 112px;
+  grid-template-rows: 132px minmax(0, 1fr);
 }
 
 .right {
@@ -35,6 +35,8 @@
 
 .center {
   grid-area: center;
+  position: relative;
+  z-index: 1;
   min-width: 0;
   min-height: 0;
 }
@@ -46,35 +48,37 @@
 
 .footer {
   grid-area: footer;
+  position: relative;
+  z-index: 6;
   min-height: 0;
 }
 
-.audioLabel {
+.footerPanel {
+  overflow: visible;
+}
+
+.stageIdle {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
   color: var(--color-text-dim);
-  font-size: 9px;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
   text-transform: uppercase;
+  text-align: center;
 }
 
-.audioGrid {
-  height: 54px;
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  margin-top: 16px;
-  --lk-fg: var(--color-cyan);
-  --lk-va-bg: rgba(0, 212, 245, 0.2);
+.stageIdle span {
+  font-size: 10px;
 }
 
-.audioGrid :global(.lk-audio-bar) {
-  width: 4px;
-  background: rgba(0, 212, 245, 0.28);
-  box-shadow: 0 0 8px rgba(0, 212, 245, 0.55);
-}
-
-.audioGrid :global(.lk-audio-bar.lk-highlighted),
-.audioGrid :global(.lk-audio-bar[data-lk-highlighted="true"]) {
-  background: var(--color-cyan);
+.stageIdle strong {
+  color: var(--color-bright);
+  font-size: 13px;
+  font-weight: 400;
+  text-shadow: var(--glow-cyan);
 }
 
 @media (max-width: 980px) {
