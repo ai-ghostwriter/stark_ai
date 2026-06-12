@@ -2,6 +2,31 @@
 
 🇬🇧 [Read in English](README.md)
 
+## Indice
+
+- [Architettura ad alto livello](#architettura-ad-alto-livello)
+  - [Ruoli agentici](#ruoli-agentici)
+- [Componenti principali](#componenti-principali)
+  - [`packages/core`](#packagescore)
+  - [`packages/ui`](#packagesui)
+  - [`packages/voice`](#packagesvoice)
+  - [`packages/contracts`](#packagescontracts)
+  - [`tools`](#tools)
+  - [`prompts`](#prompts)
+  - [`docker`](#docker)
+  - [`seed`](#seed)
+- [Entrypoint unico](#entrypoint-unico)
+- [Requisiti](#requisiti)
+  - [Runtime](#runtime)
+  - [Variabili ambiente](#variabili-ambiente)
+- [Stato attuale](#stato-attuale)
+- [Comandi di manutenzione](#comandi-di-manutenzione)
+- [Per Utenti Non Esperti / Guida Rapida](#per-utenti-non-esperti--guida-rapida)
+  - [Come usare l'app](#come-usare-lapp)
+  - [Esempi di prompt vocali per Claude Code e Codex tramite FRIDAY](#esempi-di-prompt-vocali-per-claude-code-e-codex-tramite-friday)
+  - [Dove si trovano prompt e istruzioni delle personas](#dove-si-trovano-prompt-e-istruzioni-delle-personas)
+- [Note di repository](#note-di-repository)
+
 STARK-AI è una piattaforma agentica voice-first per coordinare assistenti AI, tool locali e workflow di sviluppo controllati. Lo stato attuale del progetto ruota attorno a **FRIDAY** come planner/orchestratore vocale: dalla UI e dalla voce può generare run operativi, passare da un gate di approvazione umano ed eseguire una catena locale `Claude Architect -> Codex Implementer -> Claude Reviewer`.
 
 Il repository è un monorepo modulare con pacchetti Node/TypeScript, un layer voce Python, una dashboard React e una suite di server MCP locali. Il file `FRIDAY_MASTER_SPEC.md` resta il contratto architetturale di lungo periodo; il codice attuale implementa già una prima versione reale del planner FRIDAY, non ancora l'intero sistema operativo multi-agent descritto nella visione.
