@@ -233,6 +233,61 @@ Il progetto mantiene comandi di test e generazione nel `Makefile`:
 
 Per il runtime completo resta valido un solo entrypoint: `./start.sh`.
 
+## For Dummies / Guida rapida
+
+### Come usare l'app
+
+Usare lo script root come unico entrypoint:
+
+```bash
+./start.sh
+```
+
+Poi aprire la dashboard nel browser:
+
+```text
+http://localhost:5173
+```
+
+La UI si connette alla room voce LiveKit tramite il token server e il voice agent Python. Quando la dashboard è aperta, usare i controlli di connessione voce e microfono nella UI per iniziare a parlare con l'assistente attivo.
+
+La persona attiva, di solito **FRIDAY** o **JARVIS**, risponde a voce. I render event come piani, metriche, stato workflow e altri output strutturati appaiono nell'HUD centrale.
+
+### Esempi di prompt vocali per Claude Code e Codex tramite FRIDAY
+
+FRIDAY può orchestrare Claude e Codex tramite i tool di workflow:
+
+- `friday_workflow`: pianifica una run senza eseguirla;
+- `friday_run`: esegue la catena reale `Claude Architect -> approval gate -> Codex Implementer -> Claude Reviewer` usando `git diff`;
+- `friday_run_status`: riporta lo stato della run corrente o più recente;
+- `friday_approve`: approva o rifiuta una run in attesa all'approval gate.
+
+`Claude Architect` e `Claude Reviewer` usano la CLI `claude`. `Codex Implementer` usa la CLI `codex`. Entrambe le CLI sono indicate nei requisiti sopra perché l'esecuzione reale FRIDAY dipende da loro.
+
+Esempi concreti vocali o testuali:
+
+- "FRIDAY, pianifica una analisi di questo repository." -> `friday_workflow`, kind `analysis`.
+- "FRIDAY, esegui il workflow per implementare [funzionalità X] nel workspace [nome]." -> `friday_run`, kind `implementation`.
+- "FRIDAY, qual è lo stato dell'ultimo run?" -> `friday_run_status`.
+- "FRIDAY, approvo il run." -> `friday_approve`, decision `approve`.
+- "FRIDAY, rifiuto il run." -> `friday_approve`, decision `reject`.
+- "FRIDAY, fai una review del codice nel workspace [nome]." -> `friday_run`, kind `review`.
+
+### Dove si trovano prompt e istruzioni delle personas
+
+Ogni persona ha un profilo JSON in `packages/core/personas/profiles/<nome>.json`. I profili attuali sono **FRIDAY**, **JARVIS**, **VERONICA** e **WAR-MACHINE**.
+
+I campi principali sono:
+
+- `agentInstruction`: prompt di sistema/personalità;
+- `sessionInstruction`: istruzioni operative per la sessione, inclusi i tool che la persona deve usare;
+- `voice`: impostazioni voce Kokoro/EdgeTTS;
+- `routingHints`: preferenze di routing per modelli locali o cloud.
+
+Il layer vocale Python in `packages/voice/personas/<nome>.py` carica questi profili JSON tramite `packages/voice/personas/_profiles.py`.
+
+Per modificare cosa dice o come si comporta una persona, editare il relativo file JSON sotto `packages/core/personas/profiles/`.
+
 ## Note di repository
 
 - Il `package.json` root contiene solo dipendenze helper (`concurrently`) e non dichiara workspaces npm.

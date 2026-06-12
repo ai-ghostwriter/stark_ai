@@ -233,6 +233,61 @@ The project keeps test and generation commands in the `Makefile`:
 
 For the full runtime, only one entrypoint remains valid: `./start.sh`.
 
+## For Dummies / Quick guide
+
+### How to use the app
+
+Use the root script as the only entrypoint:
+
+```bash
+./start.sh
+```
+
+Then open the dashboard in the browser:
+
+```text
+http://localhost:5173
+```
+
+The UI connects to the LiveKit voice room through the token server and the Python voice agent. Once the dashboard is open, use the voice connection and microphone controls in the UI to start speaking with the active assistant.
+
+The active persona, usually **FRIDAY** or **JARVIS**, answers by voice. Render events such as plans, metrics, workflow state and other structured outputs appear in the central HUD.
+
+### Voice prompt examples for Claude Code and Codex through FRIDAY
+
+FRIDAY can orchestrate Claude and Codex through the workflow tools:
+
+- `friday_workflow`: plans a run without executing it;
+- `friday_run`: executes the real chain `Claude Architect -> approval gate -> Codex Implementer -> Claude Reviewer` using `git diff`;
+- `friday_run_status`: reports the current or latest run state;
+- `friday_approve`: approves or rejects a run waiting at the approval gate.
+
+`Claude Architect` and `Claude Reviewer` use the `claude` CLI. `Codex Implementer` uses the `codex` CLI. Both CLIs are listed in the requirements above because real FRIDAY execution depends on them.
+
+Concrete voice or text prompts:
+
+- "FRIDAY, plan an analysis of this repository." -> `friday_workflow`, kind `analysis`.
+- "FRIDAY, run the workflow to implement [feature X] in workspace [name]." -> `friday_run`, kind `implementation`.
+- "FRIDAY, what is the status of the latest run?" -> `friday_run_status`.
+- "FRIDAY, I approve the run." -> `friday_approve`, decision `approve`.
+- "FRIDAY, reject the run." -> `friday_approve`, decision `reject`.
+- "FRIDAY, review the code in workspace [name]." -> `friday_run`, kind `review`.
+
+### Where persona prompts and instructions live
+
+Each persona has a JSON profile in `packages/core/personas/profiles/<name>.json`. The current profiles are **FRIDAY**, **JARVIS**, **VERONICA** and **WAR-MACHINE**.
+
+The main fields are:
+
+- `agentInstruction`: system/personality prompt;
+- `sessionInstruction`: operational session instructions, including which tools the persona should use;
+- `voice`: Kokoro/EdgeTTS voice settings;
+- `routingHints`: routing preferences for local or cloud models.
+
+The Python voice layer in `packages/voice/personas/<name>.py` loads these JSON profiles through `packages/voice/personas/_profiles.py`.
+
+To change what a persona says or how it behaves, edit the related JSON file under `packages/core/personas/profiles/`.
+
 ## Repository notes
 
 - The root `package.json` contains only helper dependencies (`concurrently`) and does not declare npm workspaces.

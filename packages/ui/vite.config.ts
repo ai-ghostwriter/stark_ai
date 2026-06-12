@@ -15,6 +15,7 @@ export default defineConfig({
       "/mode": "http://localhost:8788",
       "/persona": "http://localhost:8788",
       "/workflow": "http://localhost:8787",
+      "/tools": "http://localhost:8787",
     },
   },
 });
