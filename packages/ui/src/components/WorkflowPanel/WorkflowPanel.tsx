@@ -128,21 +128,24 @@ export function WorkflowPanel() {
   return (
     <div className={styles.workflow}>
       <div className={styles.toolbar}>
-        <div className={styles.kindGroup} role="tablist" aria-label="Workflow kind">
-          {(Object.keys(kindLabels) as WorkflowKind[]).map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={value === kind ? styles.kindActive : styles.kind}
-              onClick={() => setKind(value)}
-              aria-pressed={value === kind}
-            >
-              {kindLabels[value]}
-            </button>
-          ))}
+        <div className={styles.kindSection}>
+          <span className={styles.kindLabel}>Workflow type</span>
+          <div className={styles.kindGroup} role="tablist" aria-label="Workflow kind">
+            {(Object.keys(kindLabels) as WorkflowKind[]).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={value === kind ? styles.kindActive : styles.kind}
+                onClick={() => setKind(value)}
+                aria-pressed={value === kind}
+              >
+                {kindLabels[value]}
+              </button>
+            ))}
+          </div>
         </div>
         <button type="button" className={styles.runButton} onClick={() => void startRun()} disabled={loading || isActive}>
-          {loading || isActive ? "RUNNING..." : "EXECUTE"}
+          {loading || isActive ? "RUNNING..." : "EXECUTE WORKFLOW"}
         </button>
       </div>
 

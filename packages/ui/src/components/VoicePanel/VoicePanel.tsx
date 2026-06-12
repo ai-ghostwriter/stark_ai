@@ -26,9 +26,10 @@ export function VoicePanel() {
       </div>
       <div className={styles.core}>
         <div className={styles.ring}>
-          <div className={styles.innerRing}>
-            <Waveform active={activeWaveform} />
-          </div>
+          <div className={styles.innerRing} />
+        </div>
+        <div className={styles.waveformLayer}>
+          <Waveform active={activeWaveform} />
         </div>
       </div>
       <div className={styles.audioMonitor}>

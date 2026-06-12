@@ -19,7 +19,7 @@ describe("WorkflowPanel", () => {
   it("renders controls for starting a workflow", () => {
     render(<WorkflowPanel />);
 
-    expect(screen.getByRole("button", { name: "EXECUTE" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "EXECUTE WORKFLOW" })).toBeInTheDocument();
     expect(screen.getByLabelText(/Request/i)).toHaveValue("analyze this repository");
     expect(screen.getByRole("tablist", { name: "Workflow kind" })).toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe("WorkflowPanel", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<WorkflowPanel />);
-    fireEvent.click(screen.getByRole("button", { name: "EXECUTE" }));
+    fireEvent.click(screen.getByRole("button", { name: "EXECUTE WORKFLOW" }));
 
     await waitFor(() => expect(screen.getByText("workspaces/demo")).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith(

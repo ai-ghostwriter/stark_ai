@@ -1,24 +1,51 @@
 .workflow {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: max-content;
+  align-content: start;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.workflow::-webkit-scrollbar {
+  width: 6px;
+}
+
+.workflow::-webkit-scrollbar-track {
+  background: rgba(0, 11, 20, 0.6);
+}
+
+.workflow::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 245, 0.35);
+}
+
+.toolbar {
   display: grid;
   gap: 10px;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.kindSection {
+  display: grid;
+  gap: 6px;
+}
+
+.kindLabel {
+  color: var(--color-text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .kindGroup {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
 }
 
 .kind,
-.kindActive,
-.runButton {
+.kindActive {
+  flex: 1;
   border: 1px solid var(--color-border);
   background: rgba(0, 11, 20, 0.55);
   color: var(--color-text-dim);
@@ -37,8 +64,19 @@
 }
 
 .runButton {
+  width: 100%;
+  border: 1px solid var(--color-cyan);
+  background: rgba(0, 212, 245, 0.12);
   color: var(--color-bright);
-  border-color: var(--color-cyan-dim);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: var(--glow-cyan);
+  box-shadow: var(--glow-cyan);
+  padding: 10px 0;
+  cursor: pointer;
 }
 
 .runButton:disabled {

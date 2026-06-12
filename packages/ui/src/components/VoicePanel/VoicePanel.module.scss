@@ -52,6 +52,7 @@
 }
 
 .core {
+  position: relative;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -59,6 +60,14 @@
   place-items: center;
   min-height: 0;
   overflow: visible;
+}
+
+.waveformLayer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 
 .ring {

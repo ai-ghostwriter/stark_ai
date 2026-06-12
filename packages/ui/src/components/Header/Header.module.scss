@@ -6,7 +6,7 @@
   justify-content: space-between;
   border-bottom: 1px solid rgba(0, 212, 245, 0.18);
   background: linear-gradient(90deg, rgba(0, 11, 20, 0.72), rgba(0, 11, 20, 0.28));
-  padding: 0 14px;
+  padding: 0 168px 0 14px;
 }
 
 .brand {
@@ -95,6 +95,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 8px 14px;
+    padding-right: 14px;
   }
 
   .modeSelector {

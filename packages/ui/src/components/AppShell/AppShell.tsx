@@ -38,13 +38,13 @@ export function AppShell({ onReconnect }: AppShellProps) {
         <HudPanel title="Info Sistema" glowIntensity="dim">
           <SystemInfo />
         </HudPanel>
-        <HudPanel title="FRIDAY / JARVIS Workflow" glowIntensity="normal">
-          <WorkflowPanel />
-        </HudPanel>
       </aside>
       <footer className={styles.footer}>
         <HudPanel title="Log" glowIntensity="dim" className={styles.footerPanel}>
           <EventLog onReconnect={onReconnect} />
+        </HudPanel>
+        <HudPanel title="FRIDAY / JARVIS Workflow" glowIntensity="normal">
+          <WorkflowPanel />
         </HudPanel>
       </footer>
     </div>

@@ -1,7 +1,7 @@
 .shell {
   height: 100%;
   display: grid;
-  grid-template-rows: 48px minmax(0,1fr) 180px;
+  grid-template-rows: 48px minmax(0,1fr) 260px;
   grid-template-columns: 220px minmax(0,1fr) 260px;
   grid-template-areas:
     "header header header"
@@ -30,7 +30,7 @@
 
 .right {
   grid-area: right;
-  grid-template-rows: minmax(0,1fr) 154px 280px;
+  grid-template-rows: minmax(0,1fr) 154px;
 }
 
 .center {
@@ -51,6 +51,9 @@
   position: relative;
   z-index: 6;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
 }
 
 .footerPanel {
@@ -60,7 +63,7 @@
 @media (max-width: 980px) {
   .shell {
     overflow: auto;
-    grid-template-rows: 48px auto auto auto 180px;
+    grid-template-rows: 48px auto auto auto auto;
     grid-template-columns: 1fr;
     grid-template-areas:
       "header"
@@ -73,5 +76,9 @@
   .left,
   .right {
     grid-template-rows: none;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
   }
 }
