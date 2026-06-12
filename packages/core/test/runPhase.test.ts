@@ -52,6 +52,20 @@ describe("run_phase", () => {
     expect(r).toMatch(/completata/i);
   });
 
+  it("invoca il runner con sandbox workspace-write", async () => {
+    const set = new Set<string>(); // 01 ha requires [] → azionabile
+    const runner = vi.fn(async () => {
+      set.add(out("01"));
+      return { code: 0, stdout: "ok", stderr: "" };
+    });
+    const def = makeRunPhase({ exists: existsFromSet(set), runner });
+    await def.handler({ path: "/proj", phase: "01" });
+    expect(runner).toHaveBeenCalledWith(expect.any(String), {
+      cwd: "/proj",
+      sandbox: "workspace-write",
+    });
+  });
+
   it("runner ok ma output non creato → segnala", async () => {
     const runner = vi.fn(async () => ({ code: 0, stdout: "boh", stderr: "" }));
     const def = makeRunPhase({ exists: existsFromSet(new Set()), runner });

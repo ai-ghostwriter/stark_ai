@@ -47,7 +47,7 @@ export function makeRunPhase(deps: RunPhaseDeps = {}): ToolDef {
       }
 
       const prompt = buildPhasePrompt(root, phase, reqOutputs);
-      const res = await runner(prompt, { cwd: root });
+      const res = await runner(prompt, { cwd: root, sandbox: "workspace-write" });
       if (res.code !== 0) {
         return `Errore esecuzione fase ${phaseId} (exit ${res.code}): ${res.stderr.trim() || res.stdout.trim()}`;
       }
