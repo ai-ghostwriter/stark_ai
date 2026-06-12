@@ -1,5 +1,7 @@
 # STARK-AI
 
+🇮🇹 [Leggi in italiano](README.it.md)
+
 STARK-AI is a voice-first agentic platform for coordinating AI assistants, local tools and controlled development workflows. The current state of the project revolves around **FRIDAY** as a voice planner/orchestrator: from the UI and voice it can generate operational runs, pass through a human approval gate and execute a local `Claude Architect -> Codex Implementer -> Claude Reviewer` chain.
 
 The repository is a modular monorepo with Node/TypeScript packages, a Python voice layer, a React dashboard and a suite of local MCP servers. The `FRIDAY_MASTER_SPEC.md` file remains the long-term architectural contract; the current code already implements a first real version of the FRIDAY planner, not yet the entire multi-agent operating system described in the vision.
@@ -233,7 +235,7 @@ The project keeps test and generation commands in the `Makefile`:
 
 For the full runtime, only one entrypoint remains valid: `./start.sh`.
 
-## For Dummies / Quick guide
+## For Non-Expert Users / Quick Guide
 
 ### How to use the app
 
