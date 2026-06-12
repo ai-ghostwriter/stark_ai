@@ -1,30 +1,33 @@
-import { spawn } from "node:child_process";
+import { assertAllowedCommand } from "../../policy/commandPolicy.js";
+import { spawnCommand, type CommandResult } from "./spawnCommand.js";
 
-export interface CommandResult {
-  code: number;
-  stdout: string;
-  stderr: string;
+export type { CommandResult } from "./spawnCommand.js";
+
+export type CodexSandbox = "read-only" | "workspace-write";
+
+export interface CodexRunOptions {
+  cwd: string;
+  sandbox?: CodexSandbox;
+  unsafe?: boolean;
+  timeoutMs?: number;
 }
 
-export type CodexRunner = (prompt: string, opts: { cwd: string }) => Promise<CommandResult>;
+export function buildCodexArgs(prompt: string, opts: CodexRunOptions): string[] {
+  assertAllowedCommand(["codex"]);
+
+  const args = ["exec", "--skip-git-repo-check", "--ephemeral"];
+  if (opts.unsafe) {
+    args.push("--dangerously-bypass-approvals-and-sandbox", "-s", "danger-full-access");
+  } else if (opts.sandbox) {
+    args.push("-s", opts.sandbox);
+  }
+  args.push("-C", opts.cwd, prompt);
+  return args;
+}
+
+export type CodexRunner = (prompt: string, opts: CodexRunOptions) => Promise<CommandResult>;
 
 export const runCodex: CodexRunner = (prompt, opts) =>
-  new Promise<CommandResult>((resolve) => {
-    const proc = spawn("codex", [
-      "exec",
-      "--skip-git-repo-check",
-      "--ephemeral",
-      "--dangerously-bypass-approvals-and-sandbox",
-      "-s",
-      "danger-full-access",
-      "-C",
-      opts.cwd,
-      prompt,
-    ]);
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (d) => (stdout += d.toString()));
-    proc.stderr.on("data", (d) => (stderr += d.toString()));
-    proc.on("error", (e) => resolve({ code: -1, stdout, stderr: stderr + String(e) }));
-    proc.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }));
+  spawnCommand("codex", buildCodexArgs(prompt, opts), {
+    timeoutMs: opts.timeoutMs ?? 900_000,
   });
