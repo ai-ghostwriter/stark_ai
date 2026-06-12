@@ -6,3 +6,4 @@ dist/
 .venv/
 .jarvis/
 .session/tmp/
+workspaces/
