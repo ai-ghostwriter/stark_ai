@@ -3,13 +3,18 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    globals: true,
+  },
   server: {
     port: 5173,
     proxy: {
       "/token": "http://localhost:8788",
       "/mode": "http://localhost:8788",
       "/persona": "http://localhost:8788",
-      "/workflow": "http://localhost:8787"
-    }
-  }
+      "/workflow": "http://localhost:8787",
+    },
+  },
 });

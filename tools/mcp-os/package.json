@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx src/server.ts",
+    "lint": "../../node_modules/.bin/eslint . --config ../../eslint.config.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

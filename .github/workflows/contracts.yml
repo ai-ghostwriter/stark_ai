@@ -4,8 +4,12 @@ on:
   push:
     paths:
       - "packages/contracts/**"
+      - "packages/core/**"
+      - "packages/ui/**"
       - "packages/voice/contracts_gen/**"
       - "packages/voice/tests/**"
+      - "packages/voice/requirements.txt"
+      - "tools/mcp-*/**"
       - ".github/workflows/contracts.yml"
   pull_request:
 
@@ -63,3 +67,93 @@ jobs:
       - name: Python contract tests
         run: pytest tests/test_contracts.py -v
         working-directory: packages/voice
+
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install core dependencies
+        run: npm ci
+        working-directory: packages/core
+
+      - name: Core tests
+        run: npm test
+        working-directory: packages/core
+
+      - name: Core typecheck
+        run: npm run typecheck
+        working-directory: packages/core
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install UI dependencies
+        run: npm ci
+        working-directory: packages/ui
+
+      - name: UI typecheck
+        run: npm run typecheck
+        working-directory: packages/ui
+
+      - name: UI build
+        run: npm run build
+        working-directory: packages/ui
+
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install voice dependencies
+        run: pip install -r requirements.txt
+        working-directory: packages/voice
+
+      - name: Voice pytest
+        run: |
+          if [ -d tests ]; then
+            pytest tests -v
+          else
+            echo "No pytest suite present; skipping."
+          fi
+        working-directory: packages/voice
+
+  mcp-tools:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - tools/mcp-os
+          - tools/mcp-files
+          - tools/mcp-web
+          - tools/mcp-dev
+          - tools/mcp-productivity
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install MCP tool dependencies
+        run: npm ci
+        working-directory: ${{ matrix.package }}
+
+      - name: MCP tool tests
+        run: npm test
+        working-directory: ${{ matrix.package }}

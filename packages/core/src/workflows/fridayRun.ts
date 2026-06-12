@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import type { RenderResult } from "../tools/render.js";
 import type { FridayWorkflowPlan } from "./fridayWorkflow.js";
 
@@ -31,6 +33,10 @@ export interface FridayRun {
   updatedAt: string;
 }
 
+export interface FridayRunStoreOptions {
+  persistencePath?: string;
+}
+
 const TRANSITIONS: Record<FridayRunStatus, readonly FridayRunStatus[]> = {
   planned: ["architect_running", "reviewer_running", "failed"],
   architect_running: ["awaiting_approval", "completed", "failed"],
@@ -44,6 +50,12 @@ const TRANSITIONS: Record<FridayRunStatus, readonly FridayRunStatus[]> = {
 
 export class FridayRunStore {
   private readonly runs = new Map<string, FridayRun>();
+  private readonly persistencePath?: string;
+
+  constructor(options: FridayRunStoreOptions = {}) {
+    this.persistencePath = options.persistencePath ?? defaultPersistencePath();
+    this.load();
+  }
 
   create(plan: FridayWorkflowPlan): FridayRun {
     const now = new Date().toISOString();
@@ -56,6 +68,7 @@ export class FridayRunStore {
       updatedAt: now,
     };
     this.runs.set(run.id, run);
+    this.save();
     return run;
   }
 
@@ -84,6 +97,7 @@ export class FridayRunStore {
     }
     run.status = status;
     run.updatedAt = new Date().toISOString();
+    this.save();
     return run;
   }
 
@@ -91,6 +105,7 @@ export class FridayRunStore {
     const run = this.mustGet(id);
     run.steps.push({ ...step, finishedAt: new Date().toISOString() });
     run.updatedAt = new Date().toISOString();
+    this.save();
     return run;
   }
 
@@ -98,6 +113,7 @@ export class FridayRunStore {
     const run = this.mustGet(id);
     run.error = message;
     run.updatedAt = new Date().toISOString();
+    this.save();
     return run;
   }
 
@@ -106,6 +122,30 @@ export class FridayRunStore {
     if (!run) throw new Error(`Run '${id}' non trovato.`);
     return run;
   }
+
+  private load(): void {
+    if (!this.persistencePath || !existsSync(this.persistencePath)) return;
+    const raw = readFileSync(this.persistencePath, "utf8").trim();
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { runs?: FridayRun[] };
+    for (const run of parsed.runs ?? []) {
+      this.runs.set(run.id, run);
+    }
+  }
+
+  private save(): void {
+    if (!this.persistencePath) return;
+    mkdirSync(dirname(this.persistencePath), { recursive: true });
+    const payload = JSON.stringify({ runs: this.list() }, null, 2);
+    const tmpPath = `${this.persistencePath}.${process.pid}.tmp`;
+    writeFileSync(tmpPath, `${payload}\n`, "utf8");
+    renameSync(tmpPath, this.persistencePath);
+  }
+}
+
+function defaultPersistencePath(): string | undefined {
+  if (process.env.NODE_ENV === "test") return undefined;
+  return resolve(process.env.FRIDAY_RUN_STORE_PATH ?? "logs/friday-runs.json");
 }
 
 const SPOKEN: Record<FridayRunStatus, string> = {

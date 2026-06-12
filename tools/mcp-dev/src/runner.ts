@@ -10,7 +10,7 @@ const interpreters: Record<string, string[]> = {
 };
 
 function suffix(path: string): string {
-  const match = /\.[^.\/]+$/.exec(path);
+  const match = /\.[^./]+$/.exec(path);
   return match?.[0]?.toLowerCase() ?? "";
 }
 

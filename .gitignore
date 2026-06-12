@@ -7,3 +7,4 @@ dist/
 .jarvis/
 .session/tmp/
 workspaces/
+logs/

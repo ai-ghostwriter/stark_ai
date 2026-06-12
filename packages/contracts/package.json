@@ -8,6 +8,7 @@
   },
   "scripts": {
     "gen": "tsx scripts/gen-jsonschema.ts",
+    "lint": "../../node_modules/.bin/eslint . --config ../../eslint.config.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

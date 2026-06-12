@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-schema/
+coverage/
+logs/
+workspaces/
+packages/voice/contracts_gen/
+**/__pycache__/

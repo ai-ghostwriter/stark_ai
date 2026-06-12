@@ -1,5 +1,15 @@
 {
+  "type": "module",
+  "scripts": {
+    "lint": "eslint packages/core packages/ui packages/contracts tools/mcp-os tools/mcp-files tools/mcp-web tools/mcp-dev tools/mcp-productivity",
+    "format:check": "prettier --check eslint.config.js prettier.config.js .github/workflows/contracts.yml package.json \"packages/{core,ui,contracts}/package.json\" \"tools/mcp-*/package.json\""
+  },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@eslint/js": "^9.39.4",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "typescript-eslint": "^8.61.0"
   }
 }
