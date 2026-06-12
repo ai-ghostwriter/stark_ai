@@ -16,6 +16,9 @@ import { chatLocal } from "./llm/ollama.js";
 import { chatApi } from "./llm/anthropic.js";
 import { isRenderResult } from "./tools/render.js";
 import type { Result, RouteCtx } from "./llm/types.js";
+import { logFridayWorkflow } from "./workflows/fridayLoggerBridge.js";
+import { getFridayExecutor, type FridayExecutor } from "./workflows/fridayExecutor.js";
+import { planFridayWorkflow, workflowPlanToRender } from "./workflows/fridayWorkflow.js";
 
 interface AskOrchestrator {
   handle(input: string, session: Session, ctx: RouteCtx): Promise<Result>;
@@ -236,6 +239,108 @@ export async function handleTranslate(translateText: TranslateText, body: string
   }
 }
 
+export async function handleFridayWorkflow(body: string): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { error: "Body JSON non valido." } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("request" in parsed) ||
+    typeof parsed.request !== "string"
+  ) {
+    return { status: 400, json: { error: "Campo 'request' mancante." } };
+  }
+
+  try {
+    const plan = planFridayWorkflow({
+      request: parsed.request,
+      workspace: "workspace" in parsed && typeof parsed.workspace === "string" ? parsed.workspace : undefined,
+      kind:
+        "kind" in parsed && (parsed.kind === "analysis" || parsed.kind === "implementation" || parsed.kind === "review")
+          ? parsed.kind
+          : undefined,
+    });
+    const logPath = logFridayWorkflow(plan);
+    const render = workflowPlanToRender(plan);
+    await publishRenderEvent({
+      v: 1,
+      type: "render.event",
+      id: randomUUID(),
+      ts: Date.now(),
+      tool: "friday_workflow",
+      render: render.render.type,
+      title: render.render.title,
+      spoken: render.spoken,
+      payload: { ...render.render.payload, logPath, workspace: plan.workspace, kind: plan.kind },
+    });
+    return { status: 200, json: { plan, logPath } };
+  } catch (e) {
+    return { status: 400, json: { error: (e as Error).message } };
+  }
+}
+
+export async function handleWorkflowRunStart(executor: FridayExecutor, body: string): Promise<HttpJsonResult> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { status: 400, json: { error: "Body JSON non valido." } };
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("request" in parsed) ||
+    typeof parsed.request !== "string" ||
+    parsed.request.trim().length === 0
+  ) {
+    return { status: 400, json: { error: "Campo 'request' mancante." } };
+  }
+
+  try {
+    const plan = planFridayWorkflow({
+      request: parsed.request,
+      workspace: "workspace" in parsed && typeof parsed.workspace === "string" ? parsed.workspace : undefined,
+      kind:
+        "kind" in parsed && (parsed.kind === "analysis" || parsed.kind === "implementation" || parsed.kind === "review")
+          ? parsed.kind
+          : undefined,
+    });
+    const { run } = executor.start(plan);
+    return { status: 202, json: { run } };
+  } catch (e) {
+    return { status: 400, json: { error: (e as Error).message } };
+  }
+}
+
+export function handleWorkflowRunGet(executor: FridayExecutor, runId: string): HttpJsonResult {
+  const run = executor.get(runId);
+  if (!run) return { status: 404, json: { error: `Run '${runId}' non trovato.` } };
+  return { status: 200, json: { run } };
+}
+
+export function handleWorkflowRunDecision(
+  executor: FridayExecutor,
+  runId: string,
+  decision: "approve" | "reject",
+): HttpJsonResult {
+  if (!executor.get(runId)) return { status: 404, json: { error: `Run '${runId}' non trovato.` } };
+  try {
+    if (decision === "approve") {
+      const { run } = executor.approve(runId);
+      return { status: 202, json: { run } };
+    }
+    return { status: 200, json: { run: executor.reject(runId) } };
+  } catch (e) {
+    return { status: 409, json: { error: (e as Error).message } };
+  }
+}
+
 export async function handleSpeak(speakText: SpeakText, body: string): Promise<HttpJsonResult> {
   let parsed: unknown;
   try {
@@ -374,6 +479,37 @@ export function createJarvisServer() {
       await ready;
       const body = await readBody(req);
       const result = await handleAsk(orchestrator, session, body, (history) => sessionStore.saveSession(history));
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/workflow") {
+      await ready;
+      const body = await readBody(req);
+      const result = await handleFridayWorkflow(body);
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/workflow/run") {
+      await ready;
+      const body = await readBody(req);
+      const result = await handleWorkflowRunStart(getFridayExecutor(), body);
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    const runDecision = url.pathname.match(/^\/workflow\/run\/([0-9a-f-]+)\/(approve|reject)$/);
+    if (req.method === "POST" && runDecision) {
+      await ready;
+      const result = handleWorkflowRunDecision(getFridayExecutor(), runDecision[1]!, runDecision[2] as "approve" | "reject");
+      sendJson(res, result.status, result.json);
+      return;
+    }
+
+    const runStatus = url.pathname.match(/^\/workflow\/run\/([0-9a-f-]+)$/);
+    if (req.method === "GET" && runStatus) {
+      const result = handleWorkflowRunGet(getFridayExecutor(), runStatus[1]!);
       sendJson(res, result.status, result.json);
       return;
     }
