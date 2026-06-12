@@ -24,6 +24,9 @@ def test_persona_modules_load_non_empty_strings_from_json_profiles():
         assert module.AGENT_INSTRUCTION == profile["agentInstruction"]
         assert module.SESSION_INSTRUCTION == profile["sessionInstruction"]
 
+    assert "friday_workflow" in jarvis.SESSION_INSTRUCTION
+    assert "friday_workflow" in friday.SESSION_INSTRUCTION
+
 
 def test_persona_loader_resolves_profiles_independent_from_cwd(tmp_path):
     original_cwd = Path.cwd()

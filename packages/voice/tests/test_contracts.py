@@ -1,6 +1,6 @@
 """Contract tests: golden fixtures from @stark-ai/contracts validate against generated Pydantic models.
 
-This is the Python half of the anti-drift lock (see docs/mark-r/SLICE-0-SPEC.md §5).
+This is the Python half of the anti-drift lock.
 """
 import json
 from pathlib import Path

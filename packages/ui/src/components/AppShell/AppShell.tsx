@@ -7,6 +7,7 @@ import { EventLog } from "../EventLog/EventLog";
 import { HudStage } from "../HudStage/HudStage";
 import { SystemInfo } from "../SystemInfo/SystemInfo";
 import { TranscriptPanel } from "../TranscriptPanel/TranscriptPanel";
+import { WorkflowPanel } from "../WorkflowPanel/WorkflowPanel";
 import { VoicePanel } from "../VoicePanel/VoicePanel";
 import styles from "./AppShell.module.scss";
 
@@ -49,6 +50,9 @@ export function AppShell({ onReconnect }: AppShellProps) {
         </HudPanel>
         <HudPanel title="Info Sistema" glowIntensity="dim">
           <SystemInfo />
+        </HudPanel>
+        <HudPanel title="FRIDAY / JARVIS Workflow" glowIntensity="normal">
+          <WorkflowPanel />
         </HudPanel>
       </aside>
       <footer className={styles.footer}>

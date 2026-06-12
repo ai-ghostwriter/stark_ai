@@ -37,10 +37,7 @@ STARK-AI/
 │   ├── docker-compose.yml
 │   └── livekit/
 │       └── livekit.yaml
-├── docs/
-│   ├── superpowers/
-│   └── jarvis-original/
-└── packages/
+├── packages/
     ├── core/
     ├── ui/
     └── voice/

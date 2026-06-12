@@ -8,7 +8,8 @@ export default defineConfig({
     proxy: {
       "/token": "http://localhost:8788",
       "/mode": "http://localhost:8788",
-      "/persona": "http://localhost:8788"
+      "/persona": "http://localhost:8788",
+      "/workflow": "http://localhost:8787"
     }
   }
 });
