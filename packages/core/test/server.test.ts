@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { WebSocketServer, type WebSocket } from "ws";
 import {
   createJarvisServer,
+  handleFridayWorkflow,
   handleAsk,
   handleSpeak,
   handleTranslate,
@@ -9,6 +11,21 @@ import {
 } from "../src/server.js";
 import { Session } from "../src/core/session.js";
 import type { Result } from "../src/llm/types.js";
+import type { Event } from "@stark-ai/contracts";
+
+function waitForRenderEvent(events: Event[]): Promise<Event> {
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error("render.event was not published")), 750);
+    const timer = setInterval(() => {
+      const event = events.find((candidate) => candidate.type === "render.event");
+      if (event) {
+        clearTimeout(deadline);
+        clearInterval(timer);
+        resolve(event);
+      }
+    }, 5);
+  });
+}
 
 const result: Result = { route: "local", model: "llama-test", tool: null, reply: "ciao da JARVIS" };
 
@@ -107,6 +124,74 @@ describe("handleSpeak", () => {
     expect(res.status).toBe(400);
     expect(res.json).toHaveProperty("error");
     expect(speakText).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleFridayWorkflow", () => {
+  it("returns a planned workflow and log path for a valid request", async () => {
+    const res = await handleFridayWorkflow(JSON.stringify({ request: "fix the auth bug" }));
+
+    expect(res.status).toBe(200);
+    expect(res.json).toHaveProperty("plan");
+    expect((res.json as { plan: { kind: string } }).plan.kind).toBe("implementation");
+    expect(res.json).toHaveProperty("logPath");
+  });
+
+  it("returns 400 when request is missing", async () => {
+    const res = await handleFridayWorkflow("{}");
+
+    expect(res.status).toBe(400);
+    expect(res.json).toHaveProperty("error");
+  });
+
+  // timeout esteso: createJarvisServer registra anche gli MCP server reali (~4s)
+  it("publishes a render.event for the HUD", { timeout: 15_000 }, async () => {
+    const hub = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+    const events: Event[] = [];
+    const sockets = new Set<WebSocket>();
+    hub.on("connection", (socket) => {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
+      socket.on("message", (data) => events.push(JSON.parse(data.toString()) as Event));
+    });
+    await new Promise<void>((resolve) => hub.once("listening", resolve));
+    const address = hub.address();
+    if (!address || typeof address === "string") throw new Error("fake hub did not expose a port");
+    const previousHubUrl = process.env.STARK_HUB_URL;
+    process.env.STARK_HUB_URL = `ws://127.0.0.1:${address.port}`;
+
+    try {
+      const server = createJarvisServer();
+      await new Promise<void>((resolve) => server.listen(0, resolve));
+      try {
+        const srvAddress = server.address();
+        if (srvAddress === null || typeof srvAddress === "string") throw new Error("Server address non valido.");
+
+        const response = await fetch(`http://127.0.0.1:${srvAddress.port}/workflow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ request: "fix the auth bug" }),
+        });
+
+        expect(response.status).toBe(200);
+        await expect(waitForRenderEvent(events)).resolves.toMatchObject({
+          type: "render.event",
+          tool: "friday_workflow",
+          render: "stark.actions",
+          title: "FRIDAY / JARVIS Workflow",
+        });
+      } finally {
+        await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+      }
+    } finally {
+      if (previousHubUrl === undefined) {
+        delete process.env.STARK_HUB_URL;
+      } else {
+        process.env.STARK_HUB_URL = previousHubUrl;
+      }
+      for (const socket of sockets) socket.terminate();
+      await new Promise<void>((resolve, reject) => hub.close((error) => error ? reject(error) : resolve()));
+    }
   });
 });
 

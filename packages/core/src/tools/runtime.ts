@@ -9,6 +9,8 @@ import { makeRunPhase } from "./builtins/runPhase.js";
 import { makeNewBook } from "./builtins/newBook.js";
 import { makeKbIndex } from "./builtins/kbIndex.js";
 import { makeKbSearch } from "./builtins/kbSearch.js";
+import { fridayWorkflowTool } from "./builtins/fridayWorkflow.js";
+import { makeFridayRunTools } from "./builtins/fridayRun.js";
 import { aiosTools } from "./builtins/aios/index.js";
 import { registerMcpTools, type McpRuntime } from "./mcp/registry.js";
 import { Registry } from "./registry.js";
@@ -27,7 +29,7 @@ export function registerBuiltInTools(registry: Registry, cfg: Config): void {
   const kbIndex = makeKbIndex({ embed: embedder, model: cfg.embedModel });
   const kbSearch = makeKbSearch({ embed: embedder });
 
-  for (const tool of [getTime, getWeather, readFileTool, ingestCerebro, bookStatus, runPhase, newBook, kbIndex, kbSearch, ...aiosTools]) {
+  for (const tool of [getTime, getWeather, readFileTool, ingestCerebro, bookStatus, runPhase, newBook, kbIndex, kbSearch, fridayWorkflowTool, ...makeFridayRunTools(), ...aiosTools]) {
     registry.register(tool);
   }
 }
