@@ -14,6 +14,30 @@ describe("computer_control", () => {
       error: { code: "UNSUPPORTED_ACTION" },
     });
   });
+
+  it("imposta il volume del microfono su macOS", async () => {
+    const execFile = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    const control = createComputerControl({ platform: "darwin", execFile });
+
+    await expect(control({ action: "mic_set", value: 70 })).resolves.toMatchObject({ ok: true });
+    expect(execFile).toHaveBeenCalledWith(
+      "osascript",
+      ["-e", "set volume input volume 70"],
+      expect.objectContaining({ timeout: 5000 }),
+    );
+  });
+
+  it("muta il microfono portando l'input a 0", async () => {
+    const execFile = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    const control = createComputerControl({ platform: "darwin", execFile });
+
+    await expect(control({ action: "mic_mute" })).resolves.toMatchObject({ ok: true });
+    expect(execFile).toHaveBeenCalledWith(
+      "osascript",
+      ["-e", "set volume input volume 0"],
+      expect.objectContaining({ timeout: 5000 }),
+    );
+  });
 });
 
 describe("computer_settings", () => {

@@ -11,6 +11,8 @@ const safeActions = [
   "volume_up",
   "volume_down",
   "mute",
+  "mic_set",
+  "mic_mute",
   "sleep_display",
   "lock_screen",
 ] as const;
@@ -50,6 +52,16 @@ async function runMac(action: SafeAction, value: unknown, execFile: ExecFile): P
     await execFile("osascript", ["-e", "set volume with output muted"], { timeout: 5000 });
     return;
   }
+  if (action === "mic_set") {
+    await execFile("osascript", ["-e", `set volume input volume ${clampPercent(value, 50)}`], { timeout: 5000 });
+    return;
+  }
+  if (action === "mic_mute") {
+    // AppleScript has no reliable input-muted flag, so mute = input volume 0
+    // (unlike Linux which uses a real mute flag). Recover with mic_set <n>.
+    await execFile("osascript", ["-e", "set volume input volume 0"], { timeout: 5000 });
+    return;
+  }
   if (action === "sleep_display" || action === "lock_screen") {
     await execFile("pmset", ["displaysleepnow"], { timeout: 5000 });
   }
@@ -60,6 +72,8 @@ async function runLinux(action: SafeAction, value: unknown, execFile: ExecFile):
   else if (action === "volume_up") await execFile("pactl", ["set-sink-volume", "@DEFAULT_SINK@", "+10%"], { timeout: 5000 });
   else if (action === "volume_down") await execFile("pactl", ["set-sink-volume", "@DEFAULT_SINK@", "-10%"], { timeout: 5000 });
   else if (action === "mute") await execFile("pactl", ["set-sink-mute", "@DEFAULT_SINK@", "toggle"], { timeout: 5000 });
+  else if (action === "mic_set") await execFile("pactl", ["set-source-volume", "@DEFAULT_SOURCE@", `${clampPercent(value, 50)}%`], { timeout: 5000 });
+  else if (action === "mic_mute") await execFile("pactl", ["set-source-mute", "@DEFAULT_SOURCE@", "1"], { timeout: 5000 });
   else if (action === "lock_screen") await execFile("loginctl", ["lock-session"], { timeout: 5000 });
   else if (action === "sleep_display") await execFile("xset", ["dpms", "force", "off"], { timeout: 5000 });
 }

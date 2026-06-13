@@ -14,7 +14,7 @@ const tools = {
     handler: createOpenApp({ execFile, which: () => undefined }),
   },
   computer_control: {
-    description: "Safe OS controls: volume, display sleep, lock screen. Shutdown/restart are excluded by design.",
+    description: "Safe OS controls: output volume, microphone volume, display sleep, lock screen. Shutdown/restart are excluded by design.",
     inputSchema: computerControlSchema,
     handler: createComputerControl({ execFile }),
   },
