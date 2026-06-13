@@ -87,6 +87,34 @@
   opacity: 0.55;
 }
 
+.musicControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.musicButton {
+  background: transparent;
+  border: 1px solid rgba(0, 212, 245, 0.42);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.musicButton:hover {
+  border-color: var(--color-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.musicSlider {
+  width: 80px;
+  accent-color: var(--color-cyan);
+  cursor: pointer;
+}
+
 @media (max-width: 720px) {
   .header {
     height: auto;

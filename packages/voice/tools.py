@@ -9,6 +9,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
 
+from volume import set_system_volume, set_microphone_volume, set_music_volume
+
 @function_tool()
 async def get_weather(
     context: RunContext,  # type: ignore
@@ -113,3 +115,48 @@ async def send_email(
     except Exception as e:
         logging.error(f"Error sending email: {e}")
         return f"An error occurred while sending email: {str(e)}"
+
+
+@function_tool()
+async def set_system_volume_tool(
+    context: RunContext,  # type: ignore
+    level: str) -> str:
+    """
+    Set the computer's output (speaker) volume.
+    level: a percentage 0-100, or the words "mute"/"max".
+    """
+    try:
+        n = await asyncio.to_thread(set_system_volume, level)
+        return f"Volume di sistema impostato al {n}%."
+    except Exception as exc:  # osascript non disponibile / host non-macOS
+        return f"Non riesco a regolare il volume di sistema: {exc}"
+
+
+@function_tool()
+async def set_microphone_volume_tool(
+    context: RunContext,  # type: ignore
+    level: str) -> str:
+    """
+    Set the microphone (input) volume.
+    level: a percentage 0-100, or the words "mute"/"max".
+    """
+    try:
+        n = await asyncio.to_thread(set_microphone_volume, level)
+        return f"Volume microfono impostato al {n}%."
+    except Exception as exc:  # osascript non disponibile / host non-macOS
+        return f"Non riesco a regolare il volume del microfono: {exc}"
+
+
+@function_tool()
+async def set_music_volume_tool(
+    context: RunContext,  # type: ignore
+    level: str) -> str:
+    """
+    Set the background music volume in the UI.
+    level: a percentage 0-100, or the words "mute"/"max".
+    """
+    try:
+        n = await set_music_volume(level)
+        return f"Volume musica impostato al {n}%."
+    except Exception as exc:  # hub non raggiungibile
+        return f"Non riesco a raggiungere la UI per la musica: {exc}"

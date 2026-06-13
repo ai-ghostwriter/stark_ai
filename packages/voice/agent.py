@@ -25,7 +25,10 @@ from livekit.plugins import google, openai
 
 from personas import detect_persona, get_persona
 from tts_kokoro import make_tts
-from tools import get_weather, search_web, send_email
+from tools import (
+    get_weather, search_web, send_email,
+    set_system_volume_tool, set_microphone_volume_tool, set_music_volume_tool,
+)
 from core_tools import load_core_tools
 from hub_bridge import DEFAULT_HUB_URL, ask_core
 
@@ -179,7 +182,10 @@ class StarkAssistant(Agent):
 
 # -- Session factories --------------------------------------------------------
 
-LEGACY_TOOLS = [get_weather, search_web, send_email]
+LEGACY_TOOLS = [
+    get_weather, search_web, send_email,
+    set_system_volume_tool, set_microphone_volume_tool, set_music_volume_tool,
+]
 
 
 async def resolve_session_tools() -> list:

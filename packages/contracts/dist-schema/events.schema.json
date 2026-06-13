@@ -354,6 +354,44 @@
       ],
       "additionalProperties": false
     },
+    "UiControl": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "$ref": "#/definitions/Hello/properties/v"
+        },
+        "type": {
+          "type": "string",
+          "const": "ui.control"
+        },
+        "target": {
+          "type": "string",
+          "const": "music"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "set",
+            "mute",
+            "unmute",
+            "play",
+            "pause"
+          ]
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "target",
+        "action"
+      ],
+      "additionalProperties": false
+    },
     "Event": {
       "anyOf": [
         {
@@ -394,6 +432,9 @@
         },
         {
           "$ref": "#/definitions/RenderEvent"
+        },
+        {
+          "$ref": "#/definitions/UiControl"
         }
       ]
     }

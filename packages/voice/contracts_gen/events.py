@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, RootModel
+from pydantic import BaseModel, ConfigDict, RootModel, confloat
 
 
 class Role(Enum):
@@ -45,6 +45,14 @@ class Render(Enum):
     stark_pipeline = 'stark.pipeline'
     stark_intel = 'stark.intel'
     stark_actions = 'stark.actions'
+
+
+class Action(Enum):
+    set = 'set'
+    mute = 'mute'
+    unmute = 'unmute'
+    play = 'play'
+    pause = 'pause'
 
 
 class V(RootModel[Literal[1]]):
@@ -172,6 +180,17 @@ class RenderEvent(BaseModel):
     payload: Dict[str, Any]
 
 
+class UiControl(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    v: V
+    type: Literal['ui.control']
+    target: Literal['music']
+    action: Action
+    value: Optional[confloat(ge=0.0, le=100.0)] = None
+
+
 class Event(
     RootModel[
         Union[
@@ -188,6 +207,7 @@ class Event(
             ToolResult,
             SysError,
             RenderEvent,
+            UiControl,
         ]
     ]
 ):
@@ -205,6 +225,7 @@ class Event(
         ToolResult,
         SysError,
         RenderEvent,
+        UiControl,
     ]
 
 

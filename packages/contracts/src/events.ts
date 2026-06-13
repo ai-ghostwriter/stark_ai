@@ -39,11 +39,18 @@ export const RenderEvent = z.object({ ...base, type: z.literal("render.event"),
   title: z.string(), spoken: z.string(), payload: z.record(z.unknown()) });
 export type RenderEvent = z.infer<typeof RenderEvent>;
 
+// — agent-core → hud (controllo UI) —
+export const UiControl = z.object({ ...base, type: z.literal("ui.control"),
+  target: z.literal("music"),
+  action: z.enum(["set", "mute", "unmute", "play", "pause"]),
+  value: z.number().min(0).max(100).optional() });
+export type UiControl = z.infer<typeof UiControl>;
+
 export const Event = z.discriminatedUnion("type", [
   Hello, SttPartial, SttFinal, BargeIn,
   TtsSpeak, TtsCancel,
   AgentToken, AgentDone, RouteInfo, ToolCall, ToolResult, SysError,
-  RenderEvent,
+  RenderEvent, UiControl,
 ]);
 export type Event = z.infer<typeof Event>;
 

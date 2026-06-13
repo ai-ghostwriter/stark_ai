@@ -11,7 +11,7 @@ describe("event contract — golden fixtures", () => {
     expect([...types].sort()).toEqual([
       "agent.done", "agent.token", "barge_in", "hello",
       "render.event", "route.info", "stt.final", "stt.partial", "sys.error",
-      "tool.call", "tool.result", "tts.cancel", "tts.speak",
+      "tool.call", "tool.result", "tts.cancel", "tts.speak", "ui.control",
     ]);
   });
 

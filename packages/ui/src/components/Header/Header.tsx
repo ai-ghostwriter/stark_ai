@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useVoiceAssistant } from "@livekit/components-react";
 import styles from "./Header.module.scss";
+import { useBackgroundMusic } from "../../hooks/useBackgroundMusic";
 
 type AgentMode = "gemini" | "ollama" | "claude" | "gpt";
 type Persona = "jarvis" | "friday";
@@ -97,6 +98,7 @@ export function Header({ onModeChange }: HeaderProps) {
   const now = useClock();
   const personaState = usePersona();
   const { state } = useVoiceAssistant();
+  const music = useBackgroundMusic();
   const [currentMode, setCurrentMode] = useState<AgentMode>("gemini");
   const [currentPersona, setCurrentPersona] = useState<Persona>(personaState.persona);
   const [isChangingMode, setIsChangingMode] = useState(false);
@@ -199,6 +201,37 @@ export function Header({ onModeChange }: HeaderProps) {
             {mode.toUpperCase()}
           </button>
         ))}
+      </div>
+      <div className={styles.musicControl} aria-label="Musica di sottofondo">
+        <button
+          type="button"
+          className={styles.musicButton}
+          onClick={music.togglePlay}
+          aria-pressed={music.playing}
+          aria-label={music.playing ? "Pausa musica" : "Riproduci musica"}
+          title={music.playing ? "Pausa musica" : "Riproduci musica"}
+        >
+          {music.playing ? "❚❚" : "▶"}
+        </button>
+        <button
+          type="button"
+          className={styles.musicButton}
+          onClick={music.toggleMute}
+          aria-pressed={music.muted}
+          aria-label={music.muted ? "Riattiva audio" : "Muta musica"}
+          title={music.muted ? "Riattiva audio" : "Muta musica"}
+        >
+          {music.muted ? "🔇" : "🔊"}
+        </button>
+        <input
+          type="range"
+          className={styles.musicSlider}
+          min={0}
+          max={100}
+          value={Math.round(music.volume * 100)}
+          onChange={(e) => music.setVolume(Number(e.target.value) / 100)}
+          aria-label="Volume musica"
+        />
       </div>
       <div className={styles.statusItems}>
         <span>{date}</span>
