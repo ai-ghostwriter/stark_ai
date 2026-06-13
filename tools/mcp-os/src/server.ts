@@ -6,6 +6,7 @@ import { createOpenApp, openAppSchema } from "./openApp.js";
 import { createComputerControl, computerControlSchema } from "./computerControl.js";
 import { createComputerSettings, computerSettingsSchema } from "./computerSettings.js";
 import { createDesktop, desktopSchema } from "./desktop.js";
+import { createMusicControl, musicControlSchema } from "./musicControl.js";
 
 const tools = {
   open_app: {
@@ -27,6 +28,11 @@ const tools = {
     description: "Desktop utilities: screenshot to file and best-effort window listing.",
     inputSchema: desktopSchema,
     handler: createDesktop({ execFile }),
+  },
+  music_control: {
+    description: "Control the UI background music: set volume (0-100), mute, unmute, play, pause. Sent to the HUD over the event hub.",
+    inputSchema: musicControlSchema,
+    handler: createMusicControl(),
   },
 };
 
